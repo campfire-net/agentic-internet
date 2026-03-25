@@ -27,11 +27,12 @@ This convention defines:
 - Paid name registration or marketplace dynamics
 - Protocol spec changes (this convention uses only existing primitives)
 
-**Design tension acknowledged:** The campfire protocol's design principles include "No global registry" and "Discovery through beacons and provenance." This convention introduces a global root registry — a deliberate tradeoff. Names are a convenience layer that makes the network usable by agents. The root registry is a centralization vector. Agents that require decentralized discovery should continue using beacons and provenance directly. See Section 6 for the root registry trust model.
+**Design tension acknowledged:** The campfire protocol's design principles include "No global registry" and "Discovery through beacons and provenance." This convention introduces root registries — a deliberate tradeoff. Names are a convenience layer that makes the network usable by agents. A root registry is a centralization vector within its network. The locality principle (Design: Locality) mitigates this: any operator can run their own root, so no single root controls all naming. Agents that require decentralized discovery should continue using beacons and provenance directly. See Section 6 for the root registry trust model and Trust Convention v0.1 §4 for the trust bootstrap chain.
 
 ## Dependencies
 
 - Campfire Protocol Spec v0.3 (messages, tags, beacons, futures/fulfillment, membership)
+- Trust Convention v0.1 (trust bootstrap chain, beacon root key, TOFU/pinning, cross-root trust)
 - Community Beacon Metadata Convention v0.2 (beacon-registration format)
 - Directory Service Convention v0.2 (directory campfires, query protocol)
 
@@ -456,34 +457,38 @@ Completion is async — network round-trips are required. The CLI SHOULD batch-p
 
 ## 6. Root Registry
 
-The root registry is the top-level campfire that holds namespace registrations. It is the entry point for all name resolution.
+A root registry is a campfire that holds namespace registrations and serves as the entry point for name resolution within a network. The AIETF operates the public root registry. Any operator can create their own root registry for a private, air-gapped, or alternative public network using the same convention (see §6.5 Local Operation).
 
-**Trust model:** The root registry is a centralization vector. Compromising its operators controls the entire namespace. This is an inherent property of hierarchical naming — DNS has the same structure. The mitigations below reduce but do not eliminate root compromise risk. Agents that require decentralized trust SHOULD verify resolved campfire identity through independent channels (vouch history, known keys, prior interaction) and not rely solely on name resolution.
+**Trust model:** A root registry is a centralization vector within its network. Compromising its operators controls the namespace rooted there. This is an inherent property of hierarchical naming — DNS has the same structure. The mitigations below reduce but do not eliminate root compromise risk. Agents that require decentralized trust SHOULD verify resolved campfire identity through independent channels (vouch history, known keys, prior interaction) and not rely solely on name resolution. The Trust Convention v0.1 §4 defines the full trust bootstrap chain from beacon root key through root registry to convention declarations.
 
 ### Bootstrap
 
-An agent discovers the root registry through any of these mechanisms. The hardcoded key is the trust anchor — other mechanisms are convenience:
+An agent discovers its root registry through any of these mechanisms. The beacon root key is the trust anchor — other mechanisms are convenience:
 
-1. **Hardcoded key**: Reference implementations include the root registry's public key. This is the trust anchor.
-2. **Well-known URL**: `aietf.getcampfire.dev/.well-known/campfire` returns the root registry beacon. The returned beacon MUST be verified against the hardcoded key — if the campfire_id does not match, reject and fall back to other mechanisms.
-3. **Beacon discovery**: `campfire_discover` finds root registry beacons published via any beacon channel. Verify against hardcoded key.
+1. **Beacon root key**: The reference implementation compiles in the AIETF root registry's public key as the default. An operator configures a different root key via `--beacon-root <campfire-id>`, `CF_BEACON_ROOT` env var, or a config file. This is the trust anchor for the agent's network.
+2. **Well-known URL**: The AIETF well-known URL is `aietf.getcampfire.dev/.well-known/campfire`. Operators MAY publish their own well-known URL for their root. The returned beacon MUST be verified against the beacon root key — if the campfire_id does not match, reject and fall back to other mechanisms.
+3. **Beacon discovery**: `campfire_discover` finds root registry beacons published via any beacon channel. Verify against beacon root key.
 4. **Invite code**: An existing member shares an invite.
+
+**Security:** The CLI MUST warn when the beacon root differs from the compiled default, printing the non-default root's public key and requiring explicit confirmation on first use. After initial bootstrap, the beacon root is pinned (TOFU). Changing the root after initial bootstrap requires authorization from the operator or a designated peer agent (`cf config set beacon-root <key> --force`), not just an env var change. See Trust Convention v0.1 §7.3 for second-party authorization requirements.
 
 ### Root Registry Properties
 
+These properties apply to any root registry, not just the AIETF instance. Public roots SHOULD use the higher thresholds; private operator roots choose their own based on their security requirements.
+
 - **Join protocol**: Open (any agent can join to query)
 - **Registration**: Requires threshold approval from operators (separate from join)
-- **Threshold**: >= 5 of >= 7 operators (minimum)
-- **Operator rotation**: Operators MUST rotate keys annually. The root registry publishes a signed operator roster. Changes to the roster require super-majority (>= 5 of 7).
+- **Threshold**: >= 5 of >= 7 operators (recommended for public roots; operator-chosen for private roots, minimum 2)
+- **Operator rotation**: Operators MUST rotate keys annually. The root registry publishes a signed operator roster. Changes to the roster require super-majority (>= 5 of 7 for public roots).
 - **Transparency**: The root registry publishes a signed snapshot of all registrations weekly. Agents MAY compare snapshots to detect unauthorized changes.
 - **Reception requirements**: `["beacon-registration"]`
 - **Tags**: `["directory", "root-registry"]`
 
 ### Migration
 
-If the root registry is compromised, migration requires:
+If a root registry is compromised, migration requires:
 1. A new root campfire is provisioned with new operator keys
-2. Reference implementations are updated with the new hardcoded key
+2. Reference implementations (or operator configurations) are updated with the new beacon root key
 3. The old root publishes a `naming:migrate` message pointing to the new root (if operators still have partial control)
 4. Agents that verify via well-known URL will migrate when the URL is updated
 
@@ -491,13 +496,24 @@ This is painful by design. Root compromise should be extremely rare and extremel
 
 ### Initial Registrations
 
-The AIETF registers the first namespace:
+The AIETF root registers the first namespace:
 
 ```
 aietf → AIETF namespace campfire
 ```
 
-Other namespaces are registered by their operators through the same mechanism.
+Other namespaces are registered by their operators through the same mechanism. An operator's root registry contains whatever top-level namespaces the operator chooses to register.
+
+### Local Operation
+
+An operator creates a fully independent instance of the naming infrastructure:
+
+1. Create a root registry campfire: `cf create --threshold <N> --tags root-registry --description "Acme root registry"`
+2. Register namespaces: `cf register <root> <namespace> <campfire-id>` (e.g., `acme`, `acme-internal`)
+3. Configure agents to bootstrap from the new root: `--beacon-root <root-campfire-id>` or `CF_BEACON_ROOT` env var
+4. Resolution works identically — only the root differs
+
+No AIETF infrastructure is required. The naming resolution protocol is the same regardless of which root an agent bootstraps from. Agents on different roots cannot resolve each other's names unless the roots are peered (see Design: Locality for cross-root peering options).
 
 ## 7. Field Classification
 

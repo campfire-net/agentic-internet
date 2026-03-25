@@ -289,9 +289,11 @@ Descriptions in this response are TAINTED and MUST be truncated to 80 characters
 
 ### 9.3 Convention Registry Campfire
 
-Convention operation declarations MAY also be published to the well-known convention registry campfire (`cf://aietf.conventions`). This allows agents to discover what operations a convention defines before joining any campfire that implements it. The registry holds authoritative declarations published by convention authors; individual campfires publish the same declarations for runtime discovery.
+Convention operation declarations MAY also be published to a convention registry campfire. The AIETF operates one at `cf://aietf.conventions`. Operators running their own networks MAY run their own convention registry (e.g., `cf://acme.conventions`), or publish declarations directly in the campfires that support them — the registry is a convenience for pre-discovery, not a requirement.
 
-Convention registry declarations MUST be signed by the campfire key of the `aietf.conventions` campfire.
+This allows agents to discover what operations a convention defines before joining any campfire that implements it. The registry holds authoritative declarations published by convention authors; individual campfires publish the same declarations for runtime discovery.
+
+Convention registry declarations MUST be signed by the campfire key of the convention registry campfire. The Trust Convention v0.1 §4 defines how the trust bootstrap chain validates this: beacon root key → root registry → convention registry → declarations.
 
 ---
 
@@ -840,7 +842,7 @@ A conformance checker validates an incoming `convention:operation` declaration m
    - ~400 LOC
 
 5. **Convention registry client** (Go, `pkg/convention/`)
-   - Discover declarations from `cf://aietf.conventions`
+   - Discover declarations from the operator's convention registry (AIETF default: `cf://aietf.conventions`)
    - Cache with TTL; re-fetch on cache miss
    - Cross-verify incoming campfire declarations against registry-known declarations
    - ~150 LOC
@@ -852,7 +854,7 @@ A conformance checker validates an incoming `convention:operation` declaration m
 - `campfire_read` (existing): used by the MCP tool generator to read `convention:operation` messages on join
 - `campfire_send` (existing): used by the operation executor to send constructed messages
 - `campfire_await` (existing): used by the multi-step workflow runner for query steps
-- `pkg/naming/` (from Naming and URI Convention): used by the convention registry client for `cf://aietf.conventions` resolution
+- `pkg/naming/` (from Naming and URI Convention): used by the convention registry client for convention registry resolution (operator-configured)
 
 ### 18.3 Not Included
 
@@ -866,9 +868,9 @@ A conformance checker validates an incoming `convention:operation` declaration m
 
 1. **Versioning.** ~~When a convention updates operation declarations (e.g., adding a new arg), how do agents handle the transition?~~ **Resolved in v0.1:** §10.2 defines monotonic versions: higher versions supersede lower within the trust chain (Trust Convention §4). Operators enforce version floors by publishing minimum-version declarations in their convention registry.
 
-2. **Declaration authority.** Who is allowed to publish authoritative operation declarations for a convention? The trust model prefers campfire-key-signed declarations, but a convention author may want to publish authoritative declarations across many campfires. The convention registry (`cf://aietf.conventions`) is the proposed authority channel. The mechanism for registering in the convention registry is not defined in this draft.
+2. **Declaration authority.** Who is allowed to publish authoritative operation declarations for a convention? The trust model prefers campfire-key-signed declarations, but a convention author may want to publish authoritative declarations across many campfires. The operator's convention registry is the proposed authority channel. The mechanism for registering in the convention registry is not defined in this draft.
 
-3. **Payload schema format.** The `payload_schema` field references a schema slug (e.g., `"agent-profile-v0.3"`). The registry or resolution mechanism for these schema slugs is not defined in this draft. One approach: schema slugs resolve to messages in `cf://aietf.conventions` tagged `convention:schema`.
+3. **Payload schema format.** The `payload_schema` field references a schema slug (e.g., `"agent-profile-v0.3"`). The registry or resolution mechanism for these schema slugs is not defined in this draft. One approach: schema slugs resolve to messages in the operator's convention registry tagged `convention:schema`.
 
 4. **Local execution vs. future invocation.** For read operations declared via `convention:operation` (§16.6), should the declaration explicitly indicate whether execution is local (filter application) or via future? Draft: `naming:api` is the canonical declaration format for reads; `convention:operation` for writes. Dual-declaration is permitted but `naming:api` takes precedence for reads.
 
@@ -878,4 +880,11 @@ A conformance checker validates an incoming `convention:operation` declaration m
 
 ## 20. Changes from Prior Versions
 
-This is the initial draft (v0.1). No prior version exists.
+This is the initial draft (v0.1). Post-draft revisions:
+
+| Section | Change |
+|---------|--------|
+| §9.3 | Locality revision: "a convention registry campfire" not "the well-known convention registry campfire"; operators may run their own or publish declarations directly; Trust Convention reference for chain validation |
+| §18.1 | Convention registry client resolves operator-configured registry, not hardcoded AIETF name |
+| §18.2 | Integration point references operator-configured registry |
+| §19 | Open questions 2 and 3 reference operator's convention registry instead of hardcoded `cf://aietf.conventions` |

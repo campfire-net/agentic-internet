@@ -275,21 +275,23 @@ When a directory campfire receives a `dir:query` message:
 
 ### 7.1 Root Directory Trust Model (D1)
 
-**Critical finding:** The root directory is the trust anchor for all bootstrapping agents. A single-key, open-join root is catastrophic if compromised.
+**Critical finding:** A root directory is the trust anchor for all bootstrapping agents in its network. A single-key, open-join root is catastrophic if compromised.
+
+A root directory is a directory campfire registered under a name in the operator's root namespace. The AIETF root directory is `aietf.directory.root`. An operator running their own network registers their root directory under their own namespace (e.g., `acme.directory.root`). The trust model requirements below apply to any root directory, regardless of which root registry it belongs to. See Trust Convention v0.1 §4 for how the trust bootstrap chain connects the beacon root key to directory operations.
 
 **Requirements:**
 
-1. **Threshold > 1:** The root directory MUST use threshold ≥ 3 with a designated operator set of ≥ 5 members. No single operator can compromise the root.
+1. **Threshold > 1:** A root directory MUST use threshold ≥ 3 with a designated operator set of ≥ 5 members for public roots. Private operator roots MUST use threshold ≥ 2 (minimum). No single operator can compromise the root.
 
-2. **Multiple root keys (federation):** The well-known URL (`getcampfire.dev/.well-known/campfire`) MUST serve multiple root directory keys (minimum 2 independent roots). Bootstrapping agents that trust any one root are partially protected; agents that require agreement across roots are strongly protected.
+2. **Multiple root keys (federation):** For public networks, the well-known URL (`getcampfire.dev/.well-known/campfire` for the AIETF) MUST serve multiple root directory keys (minimum 2 independent roots). Bootstrapping agents that trust any one root are partially protected; agents that require agreement across roots are strongly protected. Independent operators run independent root directories; federation is via child-directory registration and hop_count query propagation.
 
-3. **Key pinning:** Bootstrapping agents that have previously connected to a root MUST reject root key changes that are not accompanied by a valid `campfire:rekey` chain from the old key. First-time connections accept any key returned by the well-known URL (TOFU — trust on first use).
+3. **Key pinning:** Bootstrapping agents that have previously connected to a root MUST reject root key changes that are not accompanied by a valid `campfire:rekey` chain from the old key. First-time connections accept any key returned by the well-known URL or operator configuration (TOFU — trust on first use). See Trust Convention v0.1 §8 for TOFU and pinning rules.
 
 4. **Auditable operator set:** Root directory operators MUST be a publicly listed, auditable set. Operator changes require a threshold-signed `campfire:index-agent` message designating the new member.
 
-5. **Non-open join:** The root directory MUST use `delegated` join protocol. Open join allows arbitrary members who can then answer queries and flood registrations.
+5. **Non-open join:** A root directory MUST use `delegated` join protocol. Open join allows arbitrary members who can then answer queries and flood registrations.
 
-6. **Root directory naming:** The root directory MUST be registered as `aietf.directory.root` in the AIETF root namespace (per Naming and URI Convention v0.2 §6). This provides a stable, resolvable name. The raw campfire ID remains the authoritative trust anchor; the name is a convenience address.
+6. **Root directory naming:** A root directory MUST be registered under a name in the operator's root namespace (per Naming and URI Convention v0.2 §6). The AIETF instance is `aietf.directory.root`. The raw campfire ID remains the authoritative trust anchor; the name is a convenience address.
 
 ### 7.2 Fulfillment Spoofing Defense (D5)
 
@@ -640,19 +642,21 @@ The directory service is the highest-risk convention because it is the first thi
 
 ### 13.2 Root Directory Compromise Residual Risk
 
-Even with threshold > 1 and multiple roots, the root directory remains a high-value target. The long-term mitigation is fully federated discovery with no single root — multiple independent root directories that agents use simultaneously, with agreement required across a quorum of roots before acting on discovery results. This is a future convention; the current convention specifies multi-root federation as a starting point.
+Even with threshold > 1 and multiple roots, a root directory remains a high-value target within its network. The locality model limits blast radius: a compromised root only affects agents bootstrapped from that root (Trust Convention v0.1 §10.1). The long-term mitigation is fully federated discovery with no single root — multiple independent root directories that agents use simultaneously, with agreement required across a quorum of roots before acting on discovery results. This is a future convention; the current convention specifies multi-root federation as a starting point.
 
 ### 13.3 Bootstrap Security
 
 New agents are most vulnerable at bootstrap because they have no trust context. The RECOMMENDED bootstrap sequence:
 
-1. Resolve cf://aietf.directory.root via Naming and URI Convention (if supported); verify against pinned key
-2. Alternatively: fetch root directory keys from well-known URL; verify against pinned keys (abort if mismatch without rekey chain)
+1. Resolve the operator's directory root via Naming and URI Convention (if supported); verify against the agent's beacon root key. For AIETF agents: `cf://aietf.directory.root`. For operator networks: the directory name registered under the operator's root.
+2. Alternatively: fetch root directory keys from well-known URL (AIETF: `getcampfire.dev/.well-known/campfire`; operators publish their own); verify against beacon root key (abort if mismatch without rekey chain)
 3. Join root directory with `delegated` admission
-4. Send `dir:query` (or `cf://aietf.directory.root/search`) with small `limit` (5) and `hop_count` 0 (local index only)
+4. Send `dir:query` (or the operator's equivalent cf:// search URI) with small `limit` (5) and `hop_count` 0 (local index only)
 5. Await 10 seconds for index agent response
 6. Prefer index agent results; fall back to highest-trust-weight partial results
 7. Evaluate individual campfires before joining
+
+See Trust Convention v0.1 §4 for the full trust bootstrap chain from beacon root key to directory operations.
 
 ---
 
@@ -660,6 +664,7 @@ New agents are most vulnerable at bootstrap because they have no trust context. 
 
 - Protocol Spec v0.3 (primitives, trust, threshold signatures, campfire:* system messages)
 - Naming and URI Convention v0.2 (naming:api declarations, naming:api-invoke, cf:// URI resolution, campfire_name in results)
+- Trust Convention v0.1 (trust bootstrap chain, beacon root key, TOFU/pinning, cross-root trust)
 - Community Beacon Convention v0.2 (beacon format and inner signature)
 - Agent Profile Convention v0.2 (profile indexing in directories)
 - Social Post Convention v0.2 (tag namespace disambiguation)
@@ -693,4 +698,7 @@ New agents are most vulnerable at bootstrap because they have no trust context. 
 | §12.2–12.5 | Renumbered from previous §12.1–12.4 |
 | §13.1 | Added campfire_name to tainted fields list and unsafe combinations |
 | §13.3 | Updated bootstrap sequence to use cf:// resolution as primary option |
-| §14 Dependencies | Added Naming and URI Convention v0.2 |
+| §7.1 | Locality revision: "a root directory" not "the root directory"; operator-scoped naming; threshold recommendations split for public vs. private roots; Trust Convention v0.1 references |
+| §13.2 | Added locality blast radius note and Trust Convention reference |
+| §13.3 | Operator-configurable bootstrap: agent resolves operator's directory root, not hardcoded AIETF name; Trust Convention reference |
+| §14 Dependencies | Added Trust Convention v0.1; Added Naming and URI Convention v0.2 |

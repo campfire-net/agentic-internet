@@ -349,14 +349,16 @@ This is conservative: an unknown relay vouched for by a good relay starts at hal
 
 ### 9.1 cf:// URI Resolution (Primary)
 
-The primary bootstrap mechanism for agents that support the Naming and URI Convention is cf:// URI resolution. The root infrastructure campfires are reachable at:
+The primary bootstrap mechanism for agents that support the Naming and URI Convention is cf:// URI resolution. The root infrastructure campfires are reachable at names registered under the operator's root namespace. For the AIETF network:
 
 ```
-cf://aietf.relay.root          — root relay coordination campfire
-cf://aietf.directory.root      — root directory campfire (for relay discovery)
+cf://aietf.relay.root          — AIETF root relay coordination campfire
+cf://aietf.directory.root      — AIETF root directory campfire (for relay discovery)
 ```
 
-Agents resolve these URIs per the Naming and URI Convention v0.2 §2 (Name Resolution Protocol). The resolved campfire IDs serve the same function as the well-known URL response, with stronger trust guarantees: name resolution goes through the root registry's threshold-signed beacon-registration chain.
+For operator networks, the relay infrastructure is registered under the operator's namespace (e.g., `cf://acme.relay.root`).
+
+Agents resolve these URIs per the Naming and URI Convention v0.2 §2 (Name Resolution Protocol). The resolved campfire IDs serve the same function as the well-known URL response, with stronger trust guarantees: name resolution goes through the root registry's threshold-signed beacon-registration chain. The trust bootstrap chain (Trust Convention v0.1 §4) ensures the resolution is anchored to the agent's beacon root key.
 
 **Relay campfire names follow the pattern:** `<namespace>.relay.<identifier>`
 
@@ -371,9 +373,9 @@ These names MUST be registered in the appropriate parent namespace campfire per 
 
 ### 9.2 Well-Known URL (Fallback)
 
-For agents that do not support cf:// URI resolution, the well-known URL provides a fallback bootstrap path.
+For agents that do not support cf:// URI resolution, the well-known URL provides a fallback bootstrap path. The AIETF publishes a well-known URL; operators MAY publish their own for their networks.
 
-**Primary:** `https://getcampfire.dev/.well-known/campfire`
+**AIETF primary:** `https://getcampfire.dev/.well-known/campfire`
 
 The well-known URL returns a JSON document:
 
@@ -439,9 +441,9 @@ Invite codes are the trust-maximizing bootstrap: the inviter vouches for the cam
    c. Skip to step 6
 
 2. If cf:// resolution is available (Naming and URI Convention supported):
-   a. Resolve cf://aietf.directory.root → campfire ID C_dir
-   b. Resolve cf://aietf.relay.root → campfire ID C_relay
-   c. Verify resolved IDs match pinned root keys
+   a. Resolve the operator's directory root (AIETF: cf://aietf.directory.root) → campfire ID C_dir
+   b. Resolve the operator's relay root (AIETF: cf://aietf.relay.root) → campfire ID C_relay
+   c. Verify resolved IDs match the agent's beacon root key chain
    d. Skip to step 5 on success
 
 3. Fall back to well-known URL (10s timeout per endpoint):
@@ -464,7 +466,7 @@ Invite codes are the trust-maximizing bootstrap: the inviter vouches for the cam
 
 ## 10. Root Infrastructure Naming
 
-The root infrastructure campfires MUST be registered in the AIETF root namespace (per Naming and URI Convention v0.2 §6, Initial Registrations). The following names are reserved for root infrastructure:
+Root relay infrastructure is registered under the operator's root namespace. The AIETF reserves the following names for its root infrastructure:
 
 | Name | Purpose |
 |------|---------|
@@ -472,15 +474,21 @@ The root infrastructure campfires MUST be registered in the AIETF root namespace
 | `aietf.relay.root` | AIETF relay coordination campfire |
 | `aietf.relay.bootstrap` | Bootstrap relay campfire for new nodes |
 
-These registrations are managed by the root registry operators (threshold ≥ 5 of 7 approval required for changes, per the root registry trust model in the Naming and URI Convention v0.2 §6).
+These registrations are managed by the AIETF root registry operators (threshold ≥ 5 of 7 approval required for changes, per the root registry trust model in the Naming and URI Convention v0.2 §6).
 
-Operators of relay infrastructure for their own namespaces SHOULD register relay campfires under their namespace:
+Operators running their own networks register relay infrastructure under their own namespace using the same pattern:
 
 ```
 <namespace>.relay.<region-or-identifier>
 ```
 
-This allows agents to discover operator-specific relays via cf:// resolution rather than requiring direct campfire ID configuration.
+Examples:
+```
+acme.relay.root           — Acme Corp root relay coordination
+acme.relay.us-east        — Acme US East relay node
+```
+
+This allows agents to discover operator-specific relays via cf:// resolution rather than requiring direct campfire ID configuration. The naming convention and trust bootstrap chain (Trust Convention v0.1 §4) work identically regardless of which root the names are registered under.
 
 ---
 
@@ -876,6 +884,7 @@ cf bootstrap [--invite <code>]
 
 - **WG-1 (Directory Service):** The root directory campfire is defined by that convention. This convention uses the directory as a relay announcement channel. Bootstrap depends on the root directory campfire being provisioned.
 - **Naming and URI Convention v0.2:** cf:// resolution is the primary bootstrap path. The reference implementation depends on the name resolution library defined there (`pkg/naming/`).
+- **Trust Convention v0.1:** Trust bootstrap chain from beacon root key to relay infrastructure; cross-root trust for federated relay networks.
 - **spec-encryption.md:** Blind relay membership role (§2.5) is used by relay nodes that want to participate in encrypted campfires without holding keys.
 
 ---
@@ -914,4 +923,9 @@ Blind relay membership role (§2.5) is used by relay nodes that want to particip
 | §18.1 relay command | `cf relay start` accepts `--name` flag; `cf relay join` accepts cf:// URIs |
 | §18.1 bootstrap command | Updated to reflect cf:// primary / well-known fallback |
 | §18.3 Dependencies | Added Naming and URI Convention v0.2 dependency |
+| §9.1 | Locality revision: operator-scoped relay names; AIETF names are examples, not requirements; Trust Convention reference |
+| §9.2 | Operators MAY publish own well-known URL |
+| §9.6 | Bootstrap resolves operator's directory/relay roots, not hardcoded AIETF names |
+| §10 | Locality revision: root infrastructure registered under operator's namespace; AIETF reserves its names; operator examples added |
+| §18.3 | Added Trust Convention v0.1 dependency |
 | §19 Interaction | Added §19.1 Naming and URI Convention interaction |
