@@ -315,7 +315,7 @@ The `supersedes` chain is the primary mechanism for resolving same-authority con
 
 Pins persist across agent sessions. The runtime stores pins in the agent's local state (not in campfire messages). Pin storage SHOULD be integrity-protected (e.g., HMAC with a key derived from the agent's private key) to detect tampering. Pin files SHOULD have restrictive permissions (0600).
 
-**Scoped reset:** `cf trust reset` supports scoped clearing:
+**Scoped reset:** `cf trust reset` supports scoped clearing and accepts authorization from the operator or a designated peer agent (same second-party model as §7.3 and §9.1):
 - `cf trust reset --campfire <id>` — clear pins for a specific campfire
 - `cf trust reset --convention <slug>` — clear pins for a specific convention across all campfires
 - `cf trust reset --all` — clear all pins (requires confirmation: "This will clear N pins across M campfires. You will re-enter the TOFU window for all of them.")
