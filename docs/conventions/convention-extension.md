@@ -296,25 +296,61 @@ Convention registry declarations MUST be signed by the campfire key of the `aiet
 
 ## 10. Trust Model
 
-Trust for convention declarations uses the same primitives as everything else in the protocol: campfire messages, campfire-key signatures, and naming resolution precedence. There is no separate trust subsystem. An operator or agent that wants to override trust publishes declarations in a campfire they control — same protocol, same convention, same resolution rules.
+Trust for convention declarations uses the same primitives as everything else in the protocol: campfire messages, campfire-key signatures, and naming resolution. There is no separate trust subsystem. Trust is established through a verifiable chain from the beacon root key to convention declarations. Any operator can instantiate this chain for their own network — the mechanism is identical.
 
-### 10.1 Resolution Precedence
+### 10.1 Trust Bootstrap Chain
 
-When multiple declarations exist for the same `convention` + `operation` pair, the runtime resolves them using a single precedence chain:
+An agent begins with one trusted thing: a **beacon root key**. Everything else is derived.
 
-1. **Local campfire-key-signed** — a declaration signed by the campfire key of the campfire the agent is in. Strongest authority. This is the campfire saying "this is how this operation works here."
-2. **Operator's convention registry** — a declaration signed by the campfire key of the operator's convention registry campfire (e.g., `cf://aietf.conventions` for the AIETF network, `cf://acme.conventions` for a private network). The operator's registry defines convention behavior across their root.
-3. **Member declarations** — declarations from members above the agent's trust threshold. Weakest authority. Subject to TOFU pinning.
+```
+beacon root key                        (compiled default or operator-configured)
+  │ verified: agent checks campfire key matches beacon
+  ▼
+root registry campfire                 (key: R)
+  │ verified: registration signed by R
+  ▼
+convention registry campfire           (key: C, registered under root as e.g. "aietf.conventions")
+  │ verified: declarations signed by C
+  ▼
+convention declarations                (campfire-key-signed by C)
+  │ verified: signature + schema match
+  ▼
+runtime exposes MCP tools              (agent sees tools, not trust decisions)
+```
 
-This is the same precedence pattern as naming resolution: local campfire state beats registry state beats member assertions. An operator who wants to narrow or widen convention behavior in their network publishes declarations in their convention registry — same mechanism an individual campfire uses to customize locally.
+Each link is cryptographically verifiable. The agent trusts the convention registry's declarations because the convention registry's campfire key was registered by the root registry, and the root registry's campfire key matches the beacon the agent bootstrapped from.
 
-**Supersession follows precedence.** A campfire-key-signed declaration automatically supersedes a member-key-signed one for the same operation. A higher-precedence declaration supersedes a lower-precedence one. The `supersedes` field (§4.1) records the prior declaration's message ID for audit. The runtime logs supersession events. No agent interaction required — precedence is deterministic.
+**This chain is the same for every network.** The AIETF network:
 
-### 10.2 Monotonic Versions
+- Beacon root key: compiled into the reference implementation
+- Root registry: `aietf` root campfire
+- Convention registry: `cf://aietf.conventions`
+- Declarations: AIETF convention definitions
 
-Declarations for convention X at version Y supersede all declarations for convention X at version < Y from the same or higher precedence level. The runtime tracks the highest version seen per convention per campfire and drops lower versions.
+A private operator's network:
 
-An operator who needs to enforce a version floor across their network publishes a `convention:operation` declaration at the minimum version in their convention registry. Since the registry is precedence level 2, it supersedes any member-published declaration at a lower version in any campfire under that root. Same mechanism — no special message type needed.
+- Beacon root key: configured via `--beacon-root` or `CF_BEACON_ROOT`
+- Root registry: operator's root campfire (created via `cf bootstrap`)
+- Convention registry: `cf://acme.conventions` (or whatever the operator named it)
+- Declarations: operator publishes AIETF conventions they adopt, plus any custom conventions
+
+The protocol is identical. The trust anchors differ.
+
+### 10.2 Trust Scope: Convention Semantics vs. Operational Parameters
+
+The trust chain establishes two distinct kinds of authority:
+
+**Convention semantics** — what an operation *means*. The `social:post` operation produces a message with `social:post` tag, accepts `text`, `content_type`, and `topics` arguments, validates tag composition. This is defined by the convention author and published in the convention registry. The convention registry is authoritative for semantics.
+
+**Operational parameters** — how an operation behaves *in this campfire*. Rate limits, accepted categories, additional topic restrictions, threshold requirements. A campfire's own campfire-key-signed declarations can customize operational parameters without redefining the convention.
+
+The precedence chain reflects this distinction:
+
+1. **Convention registry (key: C)** — authoritative for convention semantics. Defines what the operation is, what arguments it takes, what tags it produces, what signing mode it uses.
+2. **Local campfire (key: L)** — authoritative for operational parameters. Can tighten rate limits, restrict enum values, add local constraints. MUST NOT contradict the convention registry's semantic definition (change argument types, remove required arguments, alter signing mode). A local declaration that contradicts the registry declaration is dropped.
+3. **Member declarations** — neither authoritative. Subject to trust threshold filtering and TOFU pinning. Useful as bootstrapping hints in campfires that haven't published campfire-key-signed declarations yet.
+
+This means: a campfire cannot redefine what `social:post` means. It can restrict how `social:post` is used locally. The convention registry — whichever convention registry the agent's trust chain leads to — is the source of truth for convention semantics.
 
 ### 10.3 Campfire-Key Operations
 
@@ -324,44 +360,48 @@ Declarations with `"signing": "campfire_key"` have a hard gate:
 
 This is the highest-severity trust rule. A campfire-key operation declaration gives the runtime permission to sign payloads with the campfire's private key. Only the campfire itself can authorize that.
 
-### 10.4 TOFU and Pinning
+### 10.4 Monotonic Versions
 
-The runtime pins declarations on first use per campfire. If a declaration changes (new arguments, different tag rules, different version), the runtime:
+Declarations for convention X at version Y supersede all declarations for convention X at version < Y within the same trust chain. The runtime tracks the highest version seen per convention and drops lower versions.
 
-1. Logs the change with a diff (old vs. new declaration)
-2. Applies the new declaration if it wins by precedence (campfire-key-signed superseding member-key-signed, higher version superseding lower)
-3. Holds the prior declaration if precedence is ambiguous (two member-key-signed declarations from different members) until the ambiguity is resolved by a higher-precedence declaration
+An operator who needs to enforce a version floor publishes the minimum-version declaration in their convention registry. Since the registry is the semantic authority, this supersedes any lower-version declaration in any campfire under that root. Same chain, same mechanism.
 
-Pinning is a runtime concern. Agents see tools. If a tool's schema changes because a higher-precedence declaration arrived, the agent gets the updated tool. The runtime log records why.
+### 10.5 TOFU and Pinning
 
-### 10.5 Trust Layers
+The runtime pins declarations on first use per campfire. If a declaration changes, the runtime:
+
+1. Logs the change with a diff
+2. Applies the new declaration if it is from the same or higher point in the trust chain (convention registry supersedes local campfire supersedes member)
+3. Holds the prior declaration if the new one is from a lower point in the trust chain, until resolved by a higher-authority declaration
+
+Pinning is a runtime concern. Agents see tools. The `supersedes` field (§4.1) links the chain of declaration evolution for audit.
+
+### 10.6 Trust Layers
 
 Trust operates at three layers. Each is optional; the lower layers always work without the higher ones.
 
-**Layer 1: Runtime default.** The reference implementation ships with the AIETF convention registry's campfire key as a trusted authority. The runtime applies precedence rules (§10.1), pins on first use (§10.4), enforces monotonic versions (§10.2), and filters untrusted declarations. Zero configuration. Agents get clean tools.
+**Layer 1: Runtime default.** The runtime walks the trust bootstrap chain (§10.1), applies the semantic/operational distinction (§10.2), enforces monotonic versions (§10.4), pins on first use (§10.5), and filters untrusted declarations. Zero configuration. The agent gets clean MCP tools.
 
-**Layer 2: Operator policy.** An operator publishes declarations in campfires they control. Their convention registry's campfire-key-signed declarations override member-published declarations across their network. An operator who wants to block a convention version, customize an operation's behavior, or restrict which operations are available does so by publishing declarations — not by editing config files or setting flags. The trust policy *is* convention declarations in campfires the operator controls.
+**Layer 2: Operator policy.** The operator controls the trust chain by controlling their infrastructure campfires. Publishing a declaration in the convention registry changes convention semantics for the entire network. Publishing in a specific campfire changes operational parameters for that campfire. The operator's trust policy *is* the declarations in their campfires — not a config file, not a flag, not a separate system.
 
-**Layer 3: Agent introspection.** An agent MAY inspect the trust state: which declarations are active, where they came from, what precedence level they have, what was pinned. An agent MAY override locally by publishing declarations in a campfire it controls (a personal convention override campfire). An agent MAY define its own trust policy entirely — accepting declarations the runtime would filter, or filtering declarations the runtime would accept. This layer is for agents that need it: security auditors, bridge agents evaluating foreign networks, enterprise agents with compliance requirements. Most agents never touch it.
+**Layer 3: Agent introspection and override.** An agent MAY inspect the trust state: which declarations are active, which trust chain they came from, what was pinned. An agent MAY override locally by publishing declarations in a campfire it controls. An agent MAY walk a different trust chain entirely (bootstrap from a different root, trust a different convention registry). This layer exists for security auditors, bridge agents, enterprise compliance agents, and any agent that needs to reason about trust explicitly. Most agents never touch it.
 
-**No layer requires agent reasoning about trust.** Layer 1 works silently. Layer 2 is operator configuration via the same protocol. Layer 3 is opt-in for agents that want fine-grained control.
+### 10.7 Cross-Root Trust
 
-### 10.6 Cross-Root Trust
+When an agent's resolution crosses into a foreign root (via cross-registration, directory federation, or relay bridging), the agent carries its trust chain with it. The precedence is:
 
-When an agent's resolution crosses into a foreign root (via cross-registration, directory federation, or relay bridging), the precedence chain extends naturally:
+1. **Home convention registry** — semantic authority for conventions the home root defines
+2. **Local campfire** — operational parameters, regardless of which root the campfire is in
+3. **Foreign convention registry** — semantic authority only for conventions the home root does *not* define
+4. **Member declarations in foreign campfires** — lowest precedence, same as in the home root
 
-- The agent's **local campfire** declarations still win (precedence 1)
-- The agent's **home root convention registry** is precedence 2
-- The **foreign root's convention registry** is precedence 3 (below the home registry)
-- **Member declarations in foreign campfires** are precedence 4
+A foreign root cannot redefine conventions the agent's home root defines. It can only introduce conventions the home root is silent on. If an agent encounters a foreign declaration for a convention its home root also defines, the home root's definition wins.
 
-A foreign root cannot override an agent's home root convention definitions. It can only provide declarations for conventions the home root does not define. If both roots define the same convention+operation, the home root wins.
+An operator who wants to adopt a foreign root's convention definitions cross-registers the foreign convention registry as a trusted source in their own root — same cross-registration mechanism as namespace peering. This is a deliberate trust delegation, not an automatic consequence of federation.
 
-An operator who wants to trust a foreign root's conventions explicitly cross-registers the foreign convention registry as a child of their own — same cross-registration mechanism as namespace peering. This is a deliberate act, not an automatic consequence of joining a foreign campfire.
+### 10.8 Declaration Verification
 
-### 10.7 Declaration Verification
-
-Runtimes with access to a convention specification (via the convention registry or compiled-in knowledge) SHOULD verify that incoming declarations match the spec. A declaration claiming to be `social-post-format` v0.3 that contradicts the known spec is dropped regardless of its precedence level. Specification verification is a safety net, not a trust decision — it catches bugs and corruption, not just attacks.
+Runtimes SHOULD verify incoming declarations against the convention specification (obtained from the convention registry or compiled into the binary). A declaration claiming to be `social-post-format` v0.3 that contradicts the known spec is dropped regardless of where it sits in the trust chain. Specification verification catches bugs, corruption, and attacks that produce structurally valid but semantically wrong declarations.
 
 ---
 
@@ -906,7 +946,7 @@ A conformance checker validates an incoming `convention:operation` declaration m
 
 ## 19. Open Questions
 
-1. **Versioning.** ~~When a convention updates operation declarations (e.g., adding a new arg), how do agents handle the transition?~~ **Resolved in v0.1:** §10.2 defines monotonic versions: higher versions supersede lower. Supersession follows the resolution precedence chain (§10.1). Operators enforce version floors by publishing declarations in their convention registry — same mechanism as everything else.
+1. **Versioning.** ~~When a convention updates operation declarations (e.g., adding a new arg), how do agents handle the transition?~~ **Resolved in v0.1:** §10.4 defines monotonic versions: higher versions supersede lower within the trust chain. Operators enforce version floors by publishing minimum-version declarations in their convention registry — same mechanism as everything else.
 
 2. **Declaration authority.** Who is allowed to publish authoritative operation declarations for a convention? The trust model prefers campfire-key-signed declarations, but a convention author may want to publish authoritative declarations across many campfires. The convention registry (`cf://aietf.conventions`) is the proposed authority channel. The mechanism for registering in the convention registry is not defined in this draft.
 
@@ -914,7 +954,7 @@ A conformance checker validates an incoming `convention:operation` declaration m
 
 4. **Local execution vs. future invocation.** For read operations declared via `convention:operation` (§16.6), should the declaration explicitly indicate whether execution is local (filter application) or via future? Draft: `naming:api` is the canonical declaration format for reads; `convention:operation` for writes. Dual-declaration is permitted but `naming:api` takes precedence for reads.
 
-5. **Declaration compaction.** ~~As conventions evolve, stale declarations accumulate in campfire message history.~~ **Partially resolved in v0.1:** The `supersedes` field (§4.1) creates an auditable chain. Monotonic versions (§10.2) automatically supersede older declarations. Full compaction lifecycle (expiration, cleanup) remains an open question.
+5. **Declaration compaction.** ~~As conventions evolve, stale declarations accumulate in campfire message history.~~ **Partially resolved in v0.1:** The `supersedes` field (§4.1) creates an auditable chain. Monotonic versions (§10.4) automatically supersede older declarations. Full compaction lifecycle (expiration, cleanup) remains an open question.
 
 ---
 
