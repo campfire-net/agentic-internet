@@ -337,7 +337,7 @@ When an agent's resolution crosses into a foreign root (via cross-registration, 
 
 A foreign root cannot redefine conventions the agent's home root defines. If both roots publish declarations for the same convention+operation, the home root wins.
 
-**Foreign convention introduction:** Conventions from a foreign root that the home root is silent on MUST NOT be auto-exposed as MCP tools. The runtime logs the discovery and presents them in a separate "foreign conventions" list. They are not exposed as tools until the operator explicitly whitelists the convention slug via `cf trust allow-convention <slug> --from <root-key>` or the agent's configuration includes a foreign convention whitelist. This prevents trojan conventions — malicious operations designed to exfiltrate data from visiting agents.
+**Foreign convention introduction:** Conventions from a foreign root that the home root is silent on MUST NOT be auto-exposed as MCP tools. The runtime logs the discovery and presents them in a separate "foreign conventions" list. They are not exposed as tools until whitelisted by the operator or a designated peer agent (same second-party authorization model as layer 3b in §7.3) via `cf trust allow-convention <slug> --from <root-key>` or a signed authorization in the agent's configuration campfire. This prevents trojan conventions — malicious operations designed to exfiltrate data from visiting agents.
 
 ### 9.2 Deliberate Trust Delegation
 
