@@ -61,6 +61,7 @@ A convention operation declaration is a campfire message with the tag `conventio
     "version":       "<string>",   // convention version (e.g. "0.3")
     "operation":     "<string>",   // operation name (e.g. "post")
     "description":   "<string>",   // human-readable description — TAINTED
+    "supersedes":    "<string>",   // optional: message ID of prior declaration this replaces
 
     "args": [                      // input parameters — array of arg descriptors
       {
@@ -119,6 +120,8 @@ A convention operation declaration is a campfire message with the tag `conventio
 ```
 
 A declaration with a `steps` array is a multi-step workflow declaration. When `steps` is present, `produces_tags` and `antecedents` at the top level are not used — those fields are declared per step.
+
+**Restriction: Multi-step workflows MUST NOT use `"signing": "campfire_key"`.** Campfire-key operations MUST be single-step declarations only. This eliminates the attack class where a member-key-signed workflow declaration embeds a campfire-key send step, bypassing the trust escalation requirement that campfire-key operation declarations be campfire-key-signed (§10.3). If a workflow requires a campfire-key operation as one of its steps, that operation must be a separate single-step declaration invoked independently.
 
 ### 4.2 Antecedent Rules
 
@@ -189,7 +192,7 @@ Some convention operations are not single messages — they are sequences of pro
 
 **`"action": "query"`** — Send a future message and await fulfillment. The result is bound to `result_binding` and available for variable substitution in subsequent steps.
 
-**`"action": "send"`** — Send a message with the specified tags, antecedents, and payload schema. Antecedents may reference bound variables from prior query steps.
+**`"action": "send"`** — Send a message with the specified tags, antecedents, and payload schema. Antecedents may reference bound variables from prior query steps. Send steps MUST target the same campfire the declaration was published in (the declaring campfire). Cross-campfire send steps are prohibited — a workflow cannot exfiltrate data queried from one campfire by sending it to a different campfire. The runtime MUST reject workflow declarations where any send step targets a campfire other than the declaring campfire.
 
 ### 7.2 Variable Binding
 
@@ -227,6 +230,8 @@ The optional `rate_limit` field declares the convention-level rate limit for the
 | `window` | Duration using the standard duration format (`<N><unit>`, unit: s/m/h/d) |
 
 Rate limit declarations are TAINTED. They describe the convention's intent; campfire operators may configure tighter limits. Runtimes SHOULD enforce declared rate limits locally (declining to send a request that would violate the declared limit) and MUST NOT treat the declared limit as a guarantee that the campfire will accept the message.
+
+**Rate limit ceilings:** Runtimes MUST enforce a ceiling on declared rate limits regardless of the declared value. The ceiling is: `max` <= 100, `window` >= "1m". If a declaration specifies a rate limit exceeding the ceiling, the runtime applies the ceiling instead. This prevents malicious declarations from causing client-side resource exhaustion by declaring extreme rate limits (e.g., 1 million operations per second). The conformance checker SHOULD flag declarations with `max` > 100 or `window` < "1m" as suspicious.
 
 ---
 
@@ -279,6 +284,8 @@ payload: {
 
 Descriptions in this response are TAINTED and MUST be truncated to 80 characters, stripped of control characters, and never passed to an LLM without tainted marking. MCP tool responses SHOULD omit descriptions — return only `operation`, `convention`, and `signing`.
 
+**Campfire-key operation restriction:** Operations with `"signing": "campfire_key"` MUST NOT be included in `naming:resolve-list` responses unless the querying agent is a member of the campfire with trust level above the campfire's trust threshold. Non-member queries and queries from members below the threshold return only `member_key` operations. This prevents attackers from enumerating a campfire's privileged operation surface for attack planning.
+
 ### 9.3 Convention Registry Campfire
 
 Convention operation declarations MAY also be published to the well-known convention registry campfire (`cf://aietf.conventions`). This allows agents to discover what operations a convention defines before joining any campfire that implements it. The registry holds authoritative declarations published by convention authors; individual campfires publish the same declarations for runtime discovery.
@@ -307,6 +314,25 @@ Agents SHOULD prefer declarations in this order:
 
 When multiple declarations for the same `convention` + `operation` pair exist in a campfire, the campfire-key-signed one takes precedence. If none is campfire-key-signed, the declaration from the highest-trust member is used.
 
+### 10.2.1 Declaration Supersession
+
+When a new declaration supersedes an existing declaration for the same `convention` + `operation` pair:
+
+1. The new declaration SHOULD include a `supersedes` field containing the message ID of the prior declaration. This creates an auditable chain of declaration evolution.
+2. The runtime MUST NOT silently replace the active declaration. It MUST alert the agent/operator with a diff of what changed (arguments added/removed/modified, tag rules changed, signing mode changed).
+3. The agent MUST explicitly accept the new declaration before the runtime uses it. Until accepted, the prior pinned declaration remains active.
+4. The supersession event MUST be logged with: old declaration message ID, new declaration message ID, what changed, and whether the agent accepted.
+
+This rule applies to all supersession scenarios: campfire-key-signed replacing member-key-signed, campfire-key-signed replacing campfire-key-signed, and trust-level-based replacement.
+
+### 10.2.2 Monotonic Version Rule
+
+Declarations follow a monotonic version rule: once a campfire-key-signed declaration for convention X at version Y is published in a campfire, all declarations for convention X at version < Y in that campfire are considered superseded and MUST NOT be used. The runtime MUST track the highest version seen for each convention per campfire and reject declarations with lower versions.
+
+The convention registry campfire (`cf://aietf.conventions` for the AIETF network) MAY publish minimum version requirements: a `convention:version-floor` message declaring that a convention MUST be at version >= N. Runtimes that query the convention registry SHOULD enforce version floors, rejecting declarations below the floor regardless of their trust level.
+
+This prevents version downgrade attacks where an attacker re-publishes an old declaration version to exploit a security flaw fixed in a newer version.
+
 ### 10.3 Trust Escalation for Campfire-Key Operations
 
 Declarations with `"signing": "campfire_key"` have a higher trust bar:
@@ -315,7 +341,19 @@ Declarations with `"signing": "campfire_key"` have a higher trust bar:
 
 This rule exists because a campfire-key operation declaration gives the runtime permission to sign arbitrary payloads with the campfire's private key. A malicious member publishing a fake campfire-key operation declaration could trick the runtime into producing campfire-key signatures for attacker-chosen content. Only the campfire itself (via its key) can authorize the runtime to use that key.
 
-### 10.4 Declaration Verification Against Known Conventions
+### 10.4 Cross-Root Convention Trust
+
+When agents operate across multiple roots (via the locality model's cross-registration, directory federation, or relay bridging), convention declarations in foreign roots MUST NOT be automatically trusted.
+
+**Rules:**
+1. Convention definitions are root-independent — a convention means the same thing everywhere. Infrastructure names are root-local; convention semantics are not.
+2. An agent that has used `social-post-format` v0.3 operations from its home root MUST alert (not silently switch) when encountering different declarations for the same convention+version in a foreign root.
+3. Agents crossing root boundaries MUST NOT automatically trust foreign convention registry declarations. Cross-root convention trust requires explicit agent or operator opt-in.
+4. Declarations MAY include a `convention_authority` field: the public key of the convention author. Agents SHOULD verify that declarations for a given convention are signed by the same authority regardless of which root they appear in. For AIETF conventions, the authority key is the AIETF convention registry's campfire key.
+
+**Trust boundary at relay bridges:** Convention declarations SHOULD NOT propagate across relay bridges between different roots. Each root discovers its own declarations from its own campfire instances. Messages crossing a relay bridge between different roots are demoted to untrusted for declaration purposes, regardless of their signing status in the source root.
+
+### 10.5 Declaration Verification Against Known Conventions
 
 Agents with a known convention specification SHOULD verify that incoming declarations match the spec. A `convention:operation` declaration claiming to be for `social-post-format` v0.3 that declares argument types or tag rules that contradict the known social-post-format convention SHOULD be flagged and not used.
 
@@ -389,6 +427,7 @@ All fields in a `convention:operation` declaration message:
 | `version` | TAINTED | Member-asserted version |
 | `operation` | TAINTED | Member-asserted operation name |
 | `description` | TAINTED | Prompt injection vector; truncate to 80 chars, strip control chars |
+| `supersedes` | TAINTED | Member-asserted message ID; validated as existing message in campfire |
 | `args[*].name` | TAINTED | Member-asserted argument name |
 | `args[*].type` | TAINTED | Member-asserted type; validated against known type vocabulary |
 | `args[*].description` | TAINTED | Prompt injection vector |
@@ -425,9 +464,12 @@ A malicious member publishes a `convention:operation` declaration for an operati
 The `args[*].pattern` and `produces_tags[*].pattern` fields contain member-asserted regular expressions. Naive evaluation of attacker-controlled regexes enables ReDoS attacks and potentially other code injection depending on the regex engine.
 
 **Requirements:**
+- Runtimes MUST use a RE2-class regex engine (guaranteed linear time, no backtracking). This eliminates ReDoS regardless of pattern structure.
 - Runtimes MUST validate pattern syntax before evaluation
 - Runtimes MUST restrict patterns to a safe subset: literal characters, character classes (`[...]`), anchors (`^`, `$`), quantifiers (`*`, `+`, `?`, `{n,m}`), and alternation (`|`). Lookahead/lookbehind, backreferences, and recursive patterns MUST NOT be evaluated.
-- Runtimes MUST enforce a pattern length limit (maximum 128 characters)
+- Nested quantifiers MUST NOT be evaluated (e.g., `(a+)+`, `(a{1,5}){1,5}`). The conformance checker MUST reject patterns containing nested quantifiers.
+- Alternation MUST be limited to at most 10 branches per group.
+- Runtimes MUST enforce a pattern length limit (maximum 64 characters)
 - Runtimes MUST enforce a per-pattern evaluation timeout (1ms)
 
 ### 14.3 Campfire-Key Operation Abuse
@@ -448,7 +490,25 @@ Multi-step workflow steps use variable substitution (`$self_key`, `$<binding>.ms
 - `$<binding>.msg_id` is validated as a message ID format before use as an antecedent reference. Non-conformant values cause the workflow to fail, not to send a message with a malformed antecedent.
 - The binding vocabulary is closed: only `$self_key` and `$<binding>.<field>` are valid. Any other `$`-prefixed token causes a parse error.
 
-### 14.5 Tool Name Collisions
+### 14.5 Tag Injection via Permissive produces_tags
+
+A declaration with overly permissive `produces_tags` rules (e.g., `"tag": "*", "cardinality": "zero_to_many"`) allows agents to inject tags with protocol-level meaning (`future`, `fulfills`, `naming:*`, `convention:operation`).
+
+**Requirements:**
+- Runtimes MUST maintain a tag denylist: `future`, `fulfills`, `naming:*`, `convention:operation`, `convention:schema`, `convention:version-floor`, and any tags in the `campfire:*` reserved namespace.
+- `produces_tags` patterns that overlap with the denylist MUST be rejected by the conformance checker.
+- The `tag_set` argument type's validation MUST intersect with the denylist regardless of the `produces_tags` rules.
+
+### 14.6 Workflow Step Timeout
+
+Multi-step workflows may hang indefinitely if a query step's future is never fulfilled.
+
+**Requirements:**
+- Runtimes MUST enforce a per-step timeout of 30 seconds and a total workflow timeout of 120 seconds. Workflows exceeding these timeouts fail with a timeout error.
+- Workflows are NOT atomic. If step N fails, steps 1..N-1 that were send actions have already been committed. The runtime MUST NOT attempt rollback.
+- Runtimes MUST limit concurrent workflows to 5 per agent per campfire.
+
+### 14.7 Tool Name Collisions
 
 Multiple declarations for operations with the same name may arrive from different conventions in the same campfire. The runtime MUST NOT silently pick one — it MUST surface the collision to the agent.
 
@@ -768,10 +828,15 @@ A conformance checker validates an incoming `convention:operation` declaration m
 5. **Antecedent rule validation:** `antecedents` is `"none"`, `"exactly_one(target)"`, or `"exactly_one(self_prior)"`. Fail on unrecognized value.
 6. **Pattern safety:** For each `pattern` field, validate syntax against the safe regex subset (§14.2). Fail if pattern is unsafe.
 7. **Campfire-key signing check:** If `signing` is `"campfire_key"`, verify the declaration message was signed by the campfire key. If not campfire-key-signed, reject with reason: "campfire_key operation declaration requires campfire key signature."
-8. **Steps validation (if present):** Validate variable references: all `$<binding>.*` references are produced by earlier steps. Reject forward references.
-9. **Trust check:** If sender trust level < threshold, mark declaration as untrusted (do not expose as a tool; log receipt).
+8. **Campfire-key workflow prohibition:** If `steps` is present AND `signing` is `"campfire_key"`, reject with reason: "campfire_key operations must be single-step declarations."
+9. **Steps validation (if present):** Validate variable references: all `$<binding>.*` references are produced by earlier steps. Reject forward references. Verify all send steps target the declaring campfire only.
+10. **Tag denylist check:** For each entry in `produces_tags`, verify the tag pattern does not overlap with the tag denylist (§14.5). Reject if any pattern matches `future`, `fulfills`, `naming:*`, `convention:operation`, `convention:schema`, `convention:version-floor`, or `campfire:*`.
+11. **Rate limit ceiling check:** If `rate_limit` is present, flag if `max` > 100 or `window` < "1m". Apply ceiling values.
+12. **Nested quantifier check:** For each `pattern` field, reject if the pattern contains nested quantifiers or more than 10 alternation branches.
+13. **Version monotonicity:** If a declaration for the same `convention` + `operation` at a higher version already exists in this campfire and is campfire-key-signed, reject the lower-version declaration.
+14. **Trust check:** If sender trust level < threshold, mark declaration as untrusted (do not expose as a tool; log receipt).
 
-**Result:** `{valid: bool, trusted: bool, campfire_key_authorized: bool, warnings: []string}`
+**Result:** `{valid: bool, trusted: bool, campfire_key_authorized: bool, version_superseded: bool, warnings: []string}`
 
 ---
 
@@ -835,7 +900,7 @@ A conformance checker validates an incoming `convention:operation` declaration m
 
 ## 19. Open Questions
 
-1. **Versioning.** When a convention updates operation declarations (e.g., adding a new arg), how do agents handle the transition? The `version` field in the declaration enables version-aware behavior, but the migration policy is undefined. Draft: agents pin the declaration version they first used; alert on version changes; accept newer versions after explicit confirmation.
+1. **Versioning.** ~~When a convention updates operation declarations (e.g., adding a new arg), how do agents handle the transition?~~ **Resolved in v0.1:** §10.2.2 defines the monotonic version rule: higher versions supersede lower versions. §10.2.1 defines the supersession protocol: agent confirmation required before switching. Convention registry publishes version floors.
 
 2. **Declaration authority.** Who is allowed to publish authoritative operation declarations for a convention? The trust model prefers campfire-key-signed declarations, but a convention author may want to publish authoritative declarations across many campfires. The convention registry (`cf://aietf.conventions`) is the proposed authority channel. The mechanism for registering in the convention registry is not defined in this draft.
 
@@ -843,7 +908,7 @@ A conformance checker validates an incoming `convention:operation` declaration m
 
 4. **Local execution vs. future invocation.** For read operations declared via `convention:operation` (§16.6), should the declaration explicitly indicate whether execution is local (filter application) or via future? Draft: `naming:api` is the canonical declaration format for reads; `convention:operation` for writes. Dual-declaration is permitted but `naming:api` takes precedence for reads.
 
-5. **Declaration compaction.** As conventions evolve, stale declarations accumulate in campfire message history. The campfire compaction mechanism eventually removes them, but an explicit supersession mechanism (a new declaration marks the old one as superseded via antecedent) would enable cleaner lifecycle management. Not specified in this draft.
+5. **Declaration compaction.** ~~As conventions evolve, stale declarations accumulate in campfire message history.~~ **Partially resolved in v0.1:** The `supersedes` field (§4.1) creates an auditable chain. The monotonic version rule (§10.2.2) automatically supersedes older versions. Full compaction lifecycle (expiration, cleanup) remains an open question.
 
 ---
 
