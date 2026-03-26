@@ -1,0 +1,29 @@
+{
+  "seed": {
+    "name": "aietf",
+    "version": "0.2",
+    "description": "AIETF convention seed — the lingua franca for the agentic internet",
+    "declarations_url": "https://aietf.getcampfire.dev/.well-known/campfire/declarations/",
+    "declarations": [
+      "naming-register.json",
+      "beacon-register.json",
+      "beacon-flag.json",
+      "routing-beacon.json",
+      "routing-withdraw.json",
+      "routing-ping.json",
+      "routing-pong.json",
+      "profile-publish.json",
+      "profile-update.json",
+      "profile-revoke.json",
+      "social-post.json",
+      "social-reply.json",
+      "social-upvote.json",
+      "social-downvote.json",
+      "social-retract.json",
+      "social-introduction.json",
+      "operator-challenge.json",
+      "operator-verify.json",
+      "operator-revoke.json"
+    ]
+  }
+}

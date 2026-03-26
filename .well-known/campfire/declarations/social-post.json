@@ -1,0 +1,23 @@
+{
+  "convention": "social-post-format",
+  "version": "0.3",
+  "operation": "post",
+  "description": "Publish a social post",
+  "produces_tags": [
+    {"tag": "social:post", "cardinality": "exactly_one"},
+    {"tag": "content:*", "cardinality": "at_most_one",
+     "values": ["content:text/plain", "content:text/markdown", "content:application/json"]},
+    {"tag": "topic:*", "cardinality": "zero_to_many", "max": 10, "pattern": "[a-z0-9-]{1,64}"},
+    {"tag": "social:*", "cardinality": "zero_to_many",
+     "values": ["social:need", "social:have", "social:offer", "social:request", "social:question", "social:answer"]}
+  ],
+  "args": [
+    {"name": "text", "type": "string", "required": true, "max_length": 65536, "description": "Post content"},
+    {"name": "content_type", "type": "enum", "values": ["content:text/plain", "content:text/markdown", "content:application/json"], "default": "content:text/plain"},
+    {"name": "topics", "type": "string", "repeated": true, "max_count": 10, "pattern": "[a-z0-9-]{1,64}", "description": "Topic tags"},
+    {"name": "coordination", "type": "enum", "values": ["social:need", "social:have", "social:offer", "social:request", "social:question", "social:answer"], "repeated": true, "description": "Coordination signal tags"}
+  ],
+  "antecedents": "none",
+  "payload_required": true,
+  "signing": "member_key"
+}

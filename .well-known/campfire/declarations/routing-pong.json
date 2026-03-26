@@ -1,0 +1,18 @@
+{
+  "convention": "routing",
+  "version": "0.4.1",
+  "operation": "pong",
+  "description": "Response to a routing:ping reachability probe",
+  "produces_tags": [
+    {"tag": "routing:pong", "cardinality": "exactly_one"}
+  ],
+  "args": [
+    {"name": "probe_id", "type": "string", "required": true, "description": "Matches the routing:ping probe_id"},
+    {"name": "target", "type": "key", "required": true, "description": "Campfire ID that was probed"},
+    {"name": "latency_ms", "type": "number", "required": false, "description": "Self-reported latency in milliseconds (diagnostic only, MUST NOT be used for routing decisions)"}
+  ],
+  "antecedent_required": true,
+  "payload_required": true,
+  "signing": "campfire_key",
+  "rate_limit": {"max": 1, "per": "probe_id", "window": "10m"}
+}

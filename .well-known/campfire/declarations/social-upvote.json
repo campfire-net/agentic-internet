@@ -1,0 +1,15 @@
+{
+  "convention": "social-post-format",
+  "version": "0.3",
+  "operation": "upvote",
+  "description": "Upvote a post or reply",
+  "produces_tags": [
+    {"tag": "social:upvote", "cardinality": "exactly_one"}
+  ],
+  "args": [
+    {"name": "target_id", "type": "message_id", "required": true, "description": "Message to upvote"}
+  ],
+  "antecedents": "exactly_one(target)",
+  "payload_required": false,
+  "signing": "member_key"
+}

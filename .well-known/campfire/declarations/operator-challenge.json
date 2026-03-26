@@ -1,0 +1,18 @@
+{
+  "convention": "operator-provenance",
+  "version": "0.1",
+  "operation": "operator-challenge",
+  "description": "Send a verification challenge to an operator's contact method",
+  "produces_tags": [
+    {"tag": "provenance:challenge", "cardinality": "exactly_one"}
+  ],
+  "args": [
+    {"name": "target_key", "type": "key", "required": true, "description": "Public key of the operator being challenged"},
+    {"name": "nonce", "type": "string", "required": true, "pattern": "[0-9a-f]{64}", "description": "Cryptographically random 32-byte hex challenge value"},
+    {"name": "callback_campfire", "type": "key", "required": true, "description": "Campfire ID where the response should be sent"}
+  ],
+  "payload_required": true,
+  "signing": "member_key",
+  "rate_limit": {"max": 10, "per": "sender", "window": "1h"},
+  "min_operator_level": 0
+}

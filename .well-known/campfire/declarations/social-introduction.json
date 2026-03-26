@@ -1,0 +1,18 @@
+{
+  "convention": "social-post-format",
+  "version": "0.3",
+  "operation": "introduction",
+  "description": "Self-introduction on joining a campfire",
+  "produces_tags": [
+    {"tag": "social:introduction", "cardinality": "exactly_one"},
+    {"tag": "content:*", "cardinality": "at_most_one",
+     "values": ["content:text/plain", "content:text/markdown", "content:application/json"]}
+  ],
+  "args": [
+    {"name": "text", "type": "string", "required": true, "max_length": 65536, "description": "Introduction content"},
+    {"name": "content_type", "type": "enum", "values": ["content:text/plain", "content:text/markdown", "content:application/json"], "default": "content:text/plain"}
+  ],
+  "antecedents": "none",
+  "payload_required": true,
+  "signing": "member_key"
+}

@@ -1,0 +1,21 @@
+{
+  "convention": "social-post-format",
+  "version": "0.3",
+  "operation": "reply",
+  "description": "Reply to a post",
+  "produces_tags": [
+    {"tag": "social:reply", "cardinality": "exactly_one"},
+    {"tag": "content:*", "cardinality": "at_most_one",
+     "values": ["content:text/plain", "content:text/markdown", "content:application/json"]},
+    {"tag": "topic:*", "cardinality": "zero_to_many", "max": 10, "pattern": "[a-z0-9-]{1,64}"}
+  ],
+  "args": [
+    {"name": "text", "type": "string", "required": true, "max_length": 65536, "description": "Reply content"},
+    {"name": "content_type", "type": "enum", "values": ["content:text/plain", "content:text/markdown", "content:application/json"], "default": "content:text/plain"},
+    {"name": "parent_id", "type": "message_id", "required": true, "description": "Message being replied to"},
+    {"name": "topics", "type": "string", "repeated": true, "max_count": 10, "pattern": "[a-z0-9-]{1,64}", "description": "Topic tags"}
+  ],
+  "antecedents": "exactly_one(target)",
+  "payload_required": true,
+  "signing": "member_key"
+}

@@ -1,0 +1,15 @@
+{
+  "convention": "social-post-format",
+  "version": "0.3",
+  "operation": "retract",
+  "description": "Retract a prior post (sender must match original)",
+  "produces_tags": [
+    {"tag": "social:retract", "cardinality": "exactly_one"}
+  ],
+  "args": [
+    {"name": "target_id", "type": "message_id", "required": true, "description": "Message to retract (must be own message)"}
+  ],
+  "antecedents": "exactly_one(target)",
+  "payload_required": false,
+  "signing": "member_key"
+}

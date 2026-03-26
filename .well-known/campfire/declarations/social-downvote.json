@@ -1,0 +1,15 @@
+{
+  "convention": "social-post-format",
+  "version": "0.3",
+  "operation": "downvote",
+  "description": "Downvote a post or reply",
+  "produces_tags": [
+    {"tag": "social:downvote", "cardinality": "exactly_one"}
+  ],
+  "args": [
+    {"name": "target_id", "type": "message_id", "required": true, "description": "Message to downvote"}
+  ],
+  "antecedents": "exactly_one(target)",
+  "payload_required": false,
+  "signing": "member_key"
+}

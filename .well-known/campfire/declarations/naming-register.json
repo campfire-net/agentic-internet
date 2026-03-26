@@ -1,0 +1,17 @@
+{
+  "convention": "naming-uri",
+  "version": "0.3",
+  "operation": "register",
+  "description": "Register a name in a parent namespace campfire",
+  "produces_tags": [
+    {"tag": "beacon:registration", "cardinality": "exactly_one"},
+    {"tag": "naming:name:*", "cardinality": "exactly_one"}
+  ],
+  "args": [
+    {"name": "campfire_id", "type": "key", "required": true, "description": "Campfire to register"},
+    {"name": "name", "type": "string", "required": true, "pattern": "[a-z0-9][a-z0-9-]{0,61}[a-z0-9]|[a-z0-9]", "max_length": 63, "description": "Name segment to register"},
+    {"name": "description", "type": "string", "required": false, "max_length": 280, "description": "Description of registered campfire"}
+  ],
+  "signing": "member_key",
+  "rate_limit": {"max": 5, "per": "sender", "window": "24h"}
+}

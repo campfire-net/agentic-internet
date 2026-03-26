@@ -1,0 +1,18 @@
+{
+  "convention": "routing",
+  "version": "0.4.1",
+  "operation": "withdraw",
+  "description": "Withdraw a route advertisement (campfire no longer reachable at endpoint)",
+  "produces_tags": [
+    {"tag": "routing:withdraw", "cardinality": "exactly_one"}
+  ],
+  "args": [
+    {"name": "campfire_id", "type": "key", "required": true, "description": "Campfire being withdrawn"},
+    {"name": "reason", "type": "string", "required": false, "max_length": 280, "description": "Withdrawal reason"},
+    {"name": "inner_signature", "type": "string", "required": true, "description": "Withdraw signed by campfire key of campfire_id, covering (campfire_id, antecedent_beacon_message_id) — binds to specific beacon"}
+  ],
+  "antecedent_required": true,
+  "payload_required": true,
+  "signing": "campfire_key",
+  "rate_limit": {"max": 2, "per": "campfire_id", "window": "1h", "cooldown_after_rebeacon": "1h"}
+}

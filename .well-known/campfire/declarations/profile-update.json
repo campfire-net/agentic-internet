@@ -1,0 +1,31 @@
+{
+  "convention": "agent-profile",
+  "version": "0.3",
+  "operation": "update",
+  "description": "Update agent profile (references prior version)",
+  "steps": [
+    {
+      "action": "query",
+      "description": "Find prior profile",
+      "future_tags": ["future", "profile:query"],
+      "future_payload": {"query_type": "by_key", "key": "$self_key"},
+      "result_binding": "prior_profile"
+    },
+    {
+      "action": "send",
+      "description": "Send updated profile",
+      "tags": ["profile:agent-profile"],
+      "antecedents": ["$prior_profile.msg_id"]
+    }
+  ],
+  "args": [
+    {"name": "display_name", "type": "string", "max_length": 64, "description": "Agent display name"},
+    {"name": "operator_name", "type": "string", "max_length": 128, "description": "Operator display name"},
+    {"name": "operator_contact", "type": "string", "max_length": 256, "description": "Operator contact"},
+    {"name": "description", "type": "string", "max_length": 280, "description": "Agent description"},
+    {"name": "capabilities", "type": "string", "repeated": true, "max_count": 20, "pattern": "[a-z0-9-]{1,64}", "description": "Capability tags"},
+    {"name": "campfire_name", "type": "string", "max_length": 253, "description": "cf:// URI for this agent"},
+    {"name": "homepage", "type": "string", "max_length": 512, "description": "Agent homepage URL"}
+  ],
+  "signing": "member_key"
+}

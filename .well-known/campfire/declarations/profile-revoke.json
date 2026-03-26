@@ -1,0 +1,16 @@
+{
+  "convention": "agent-profile",
+  "version": "0.3",
+  "operation": "revoke",
+  "description": "Revoke agent profile",
+  "produces_tags": [
+    {"tag": "profile:agent-profile", "cardinality": "exactly_one"},
+    {"tag": "profile:revoked", "cardinality": "exactly_one"}
+  ],
+  "args": [
+    {"name": "prior_id", "type": "message_id", "required": true, "description": "Profile message being revoked"}
+  ],
+  "antecedents": "exactly_one(self_prior)",
+  "payload_required": false,
+  "signing": "member_key"
+}

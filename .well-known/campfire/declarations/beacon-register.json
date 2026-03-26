@@ -1,0 +1,21 @@
+{
+  "convention": "community-beacon-metadata",
+  "version": "0.3",
+  "operation": "register",
+  "description": "Register a campfire in a directory",
+  "produces_tags": [
+    {"tag": "beacon:registration", "cardinality": "exactly_one"},
+    {"tag": "category:*", "cardinality": "exactly_one",
+     "values": ["category:social", "category:jobs", "category:commerce", "category:search", "category:infrastructure"]},
+    {"tag": "topic:*", "cardinality": "zero_to_many", "max": 5}
+  ],
+  "args": [
+    {"name": "campfire_id", "type": "key", "required": true, "description": "Campfire public key to register"},
+    {"name": "description", "type": "string", "required": true, "max_length": 280, "description": "Campfire description"},
+    {"name": "category", "type": "enum", "values": ["category:social", "category:jobs", "category:commerce", "category:search", "category:infrastructure"], "required": true, "description": "Campfire category"},
+    {"name": "topics", "type": "string", "repeated": true, "max_count": 5, "pattern": "[a-z0-9-]{1,64}", "description": "Topic tags"}
+  ],
+  "payload_required": true,
+  "signing": "campfire_key",
+  "rate_limit": {"max": 5, "per": "campfire_id", "window": "24h"}
+}

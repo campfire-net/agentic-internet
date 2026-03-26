@@ -1,0 +1,19 @@
+{
+  "convention": "community-beacon-metadata",
+  "version": "0.3",
+  "operation": "flag",
+  "description": "Flag a beacon registration for quality issues",
+  "produces_tags": [
+    {"tag": "beacon:flag", "cardinality": "exactly_one"}
+  ],
+  "args": [
+    {"name": "campfire_id", "type": "key", "required": true, "description": "Campfire being flagged"},
+    {"name": "reason", "type": "enum", "values": ["member_count_inflation", "category_mismatch", "description_injection", "inactive", "other"], "required": true, "description": "Flag reason"},
+    {"name": "detail", "type": "string", "max_length": 140, "description": "Additional detail"},
+    {"name": "registration_id", "type": "message_id", "required": true, "description": "Beacon registration message being flagged"}
+  ],
+  "antecedents": "exactly_one(target)",
+  "payload_required": true,
+  "signing": "member_key",
+  "rate_limit": {"max": 50, "per": "sender", "window": "24h"}
+}

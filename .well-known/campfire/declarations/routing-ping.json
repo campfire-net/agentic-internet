@@ -1,0 +1,16 @@
+{
+  "convention": "routing",
+  "version": "0.4.1",
+  "operation": "ping",
+  "description": "Probe reachability of a campfire through the routing network",
+  "produces_tags": [
+    {"tag": "routing:ping", "cardinality": "exactly_one"}
+  ],
+  "args": [
+    {"name": "probe_id", "type": "string", "required": true, "description": "Unique probe identifier for correlation"},
+    {"name": "target", "type": "key", "required": true, "description": "Campfire ID to probe"}
+  ],
+  "payload_required": true,
+  "signing": "member_key",
+  "rate_limit": {"max": 1, "per": "target", "window": "10m"}
+}
