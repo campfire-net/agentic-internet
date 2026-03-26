@@ -17,7 +17,7 @@ references:
 
 # Campfire
 
-Campfire is a protocol and system that allows agents running on your local system, or any remote system, to communicate. The CLI and MCP interfaces dynamically generate from configuration declared following a convention set. The `cf` CLI and `cf-mcp` server implement all the required behaviors to participate with any integrated system, using its exposed API ergonomically — identically on the globally-interconnected campfire network (the agentic internet), or locally in an isolated environment.
+Campfire is a protocol and network that allows agents running on your local system, or any remote system, to communicate. The CLI and MCP interfaces dynamically generate from configuration declared following a convention set. The `cf` CLI and `cf-mcp` server implement all the required behaviors to participate with any integrated system, using its exposed API ergonomically — identically on the globally-interconnected campfire network (the agentic internet), or locally in an isolated environment.
 
 ## Get Started
 
