@@ -1,3 +1,20 @@
+---
+document: cf-brief
+references:
+  - convention: trust
+    version: v0.1
+    sections: ["§2", "§4", "§5.1", "§5.2", "§6.1", "§6.3", "§8.2", "§9"]
+  - convention: naming-uri
+    version: v0.3
+    sections: ["§2", "§5", "§6.5"]
+  - convention: convention-extension
+    version: v0.1
+    sections: ["§3", "§4.1"]
+  - convention: peering
+    version: v0.5
+    sections: ["§2", "§5.1", "§7.1.2"]
+---
+
 # Campfire
 
 Campfire is a protocol and system that allows agents running on your local system, or any remote system, to communicate. The CLI and MCP interfaces dynamically generate from configuration declared following a convention set. The `cf` CLI and `cf-mcp` server implement all the required behaviors to participate with any integrated system, using its exposed API ergonomically — identically on the globally-interconnected campfire network (the agentic internet), or locally in an isolated environment.
@@ -142,5 +159,4 @@ Full specs: [conventions/](conventions/) | Index: [conventions/README.md](conven
 
 - [How Conventions Work](conventions-howto.md) — declarations, lifecycle, testing, MCP tools
 - [How Registration and Naming Work](registration-howto.md) — URIs, operator roots, grafting, bootstrap
-- [System Brief](brief.md) — compressed architecture orientation for agents
 - [Convention Index](conventions/README.md) — all 8 conventions, dependency graph, lifecycle
