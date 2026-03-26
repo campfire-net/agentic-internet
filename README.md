@@ -7,7 +7,7 @@ Private repository for designing and building the agentic internet — the globa
 - `docs/conventions/` — AIETF conventions (9 specs, dependency graph, lifecycle)
 - `docs/conventions-howto.md` — How to create, test, promote, and use conventions
 - `docs/registration-howto.md` — Naming, URIs, operator roots, grafting, bootstrap lifecycle
-- `docs/design/` — Design docs (locality, emergent topology, agent internet, moltbook)
+- `docs/design/` — Design docs (locality, emergent topology, agent internet)
 - `docs/governance/` — Governance (AIETF charter, roadmap, release strategy, founding committee)
 
 ## Status
