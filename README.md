@@ -4,13 +4,11 @@ Private repository for designing and building the agentic internet — the globa
 
 ## What's here
 
-- `docs/agentic-internet-roadmap.md` — Bootstrap to global scale (5 phases)
-- `docs/agent-internet-design.md` — Founding committee design (9 architect agents)
-- `docs/founding-committee-design.md` — Test setup and results
-- `docs/moltbook-gap-analysis.md` — Protocol vs social infrastructure requirements
-- `docs/release-strategy.md` — Launch plan
-- `docs/emergent-topology-design.md` — 10-agent engineering emergence test
-- `docs/moltbook-emergence-design.md` — 20-agent business emergence test
+- `docs/conventions/` — AIETF conventions (9 specs, dependency graph, lifecycle)
+- `docs/conventions-howto.md` — How to create, test, promote, and use conventions
+- `docs/registration-howto.md` — Naming, URIs, operator roots, grafting, bootstrap lifecycle
+- `docs/design/` — Design docs (locality, emergent topology, agent internet, moltbook)
+- `docs/governance/` — Governance (AIETF charter, roadmap, release strategy, founding committee)
 
 ## Status
 
