@@ -44,7 +44,7 @@ This convention defines a machine-readable operation declaration format — publ
 
 - Campfire Protocol Spec v0.3 (messages, tags, futures/fulfillment, membership, campfire-key signatures)
 - Naming and URI Convention v0.2 (argument type system in §4.2, service discovery pattern in §4, `naming:resolve-list` query)
-- Trust Convention v0.1 (trust bootstrap chain, authority model, content safety envelope)
+- Trust Convention v0.2 (local-first trust model, content safety envelope, federation)
 
 ---
 
@@ -293,13 +293,13 @@ Convention operation declarations MAY also be published to a convention registry
 
 This allows agents to discover what operations a convention defines before joining any campfire that implements it. The registry holds authoritative declarations published by convention authors; individual campfires publish the same declarations for runtime discovery.
 
-Convention registry declarations MUST be signed by the campfire key of the convention registry campfire. The Trust Convention v0.1 §4 defines how the trust bootstrap chain validates this: beacon root key → root registry → convention registry → declarations.
+Convention registry declarations MUST be signed by the campfire key of the convention registry campfire. The Trust Convention v0.2 §4 defines how agents evaluate declarations: the agent's local policy decides what to accept. Registry declarations are evaluated like any other external input — adopted if they match policy, ignored if they don't.
 
 ---
 
 ## 10. Trust Model
 
-Convention operation declarations are trusted per the **Trust Convention v0.1**, which defines the trust bootstrap chain (beacon root key → root registry → convention registry → declarations → tools), the authority model (convention registry for semantics, local campfire for operational parameters), the content safety envelope, trust layers, TOFU pinning, and cross-root trust.
+Convention operation declarations are trusted per the **Trust Convention v0.2**, which defines the local-first trust model (agent keypair is the trust anchor, local policy governs what is accepted), seed conventions as starter kits (not authorities), the content safety envelope, trust layers, TOFU pinning, and federation rules.
 
 This section covers convention-extension-specific trust rules that build on the trust convention's base model.
 
@@ -313,13 +313,13 @@ This is the highest-severity trust rule in this convention. A campfire-key opera
 
 ### 10.2 Monotonic Versions
 
-Declarations for convention X at version Y supersede all declarations for convention X at version < Y within the same trust chain (Trust Convention §4). The runtime tracks the highest version seen per convention and drops lower versions.
+Declarations for convention X at version Y supersede all declarations for convention X at version < Y within the agent's adopted set (Trust Convention v0.2 §5). The runtime tracks the highest version seen per convention and drops lower versions.
 
-An operator who needs to enforce a version floor publishes the minimum-version declaration in their convention registry. Since the registry is the semantic authority (Trust Convention §5.1), this supersedes any lower-version declaration in any campfire under that root.
+An operator who needs to enforce a version floor publishes the minimum-version declaration in their convention campfire. Since the agent's local policy governs adoption (Trust Convention v0.2 §4.2), this is enforced through the operator's own infrastructure.
 
 ### 10.3 Declaration Verification
 
-Runtimes SHOULD verify incoming declarations against the convention specification (obtained from the convention registry or compiled into the binary). A declaration that contradicts the known spec is dropped regardless of its position in the trust chain (Trust Convention §10.6).
+Runtimes SHOULD verify incoming declarations against the convention specification (obtained from a convention registry or compiled into the binary). A declaration that contradicts the known spec is dropped regardless of its source (Trust Convention v0.2 §10).
 
 ---
 
@@ -866,7 +866,7 @@ A conformance checker validates an incoming `convention:operation` declaration m
 
 ## 19. Open Questions
 
-1. **Versioning.** ~~When a convention updates operation declarations (e.g., adding a new arg), how do agents handle the transition?~~ **Resolved in v0.1:** §10.2 defines monotonic versions: higher versions supersede lower within the trust chain (Trust Convention §4). Operators enforce version floors by publishing minimum-version declarations in their convention registry.
+1. **Versioning.** ~~When a convention updates operation declarations (e.g., adding a new arg), how do agents handle the transition?~~ **Resolved in v0.1:** §10.2 defines monotonic versions: higher versions supersede lower within the agent's adopted set (Trust Convention v0.2 §5). Operators enforce version floors by publishing minimum-version declarations in their convention campfire.
 
 2. **Declaration authority.** Who is allowed to publish authoritative operation declarations for a convention? The trust model prefers campfire-key-signed declarations, but a convention author may want to publish authoritative declarations across many campfires. The operator's convention registry is the proposed authority channel. The mechanism for registering in the convention registry is not defined in this draft.
 
