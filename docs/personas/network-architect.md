@@ -11,7 +11,7 @@ references:
     version: v0.5
     sections: ["§2"]
   - design: design-locality.md
-  - design: emergent-topology-design.md
+  - design: design-locality.md
   - howto: registration-howto.md
 ---
 
@@ -320,7 +320,7 @@ Architects are the ones who recognize when a local pattern should be globalized.
 
 - `docs/registration-howto.md` — the name-later lifecycle in full detail, with worked examples of each stage
 - `docs/design/design-locality.md` — the locality principle: why operators running their own roots is a feature, not a bug; how private conventions coexist with global ones
-- `docs/design/emergent-topology-design.md` — how topology emerges from beacon propagation; why router placement is a design decision, not a configuration setting
+- `docs/design/design-locality.md` — the locality principle: why operators running their own roots is a feature, not a bug
 
 ---
 

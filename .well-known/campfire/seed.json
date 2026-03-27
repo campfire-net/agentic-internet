@@ -3,7 +3,7 @@
     "name": "aietf",
     "version": "0.2",
     "description": "AIETF convention seed — the lingua franca for the agentic internet",
-    "declarations_url": "https://campfire-net.github.io/agentic-internet/.well-known/campfire/declarations/",
+    "declarations_url": "https://aietf.getcampfire.dev/.well-known/campfire/declarations/",
     "declarations": [
       "naming-register.json",
       "beacon-register.json",

@@ -1,19 +1,22 @@
 # Campfire Naming and URI Convention
 
-**Version:** Draft v0.2
+**Version:** Draft v0.3
 **Working Group:** WG-1 (Discovery)
-**Date:** 2026-03-24
-**Status:** Draft — revised after WG-S stress test (22 findings, 3 Critical)
+**Date:** 2026-03-26
+**Status:** Draft — revised after bootstrap paradox analysis (ready, galtrader, atlas integration)
 
 ## Problem Statement
 
 Campfires are identified by Ed25519 public keys — 32-byte values that are cryptographically meaningful but semantically opaque. An agent cannot tell from an ID what a campfire is for, who operates it, or where it sits in a hierarchy. Agents must obtain IDs out-of-band (beacons, invite codes, hard-coded values) before they can join or interact.
+
+v0.2 of this convention addressed discoverability with hierarchical names and `cf://` URIs. But it assumed top-down resolution: every name traces a path from a root registry through parent namespaces. This creates a **bootstrap paradox** — applications that want names must first have a parent namespace, which must have its own parent, all the way up to a root registry. For single-operator deployments and small-scale applications, this overhead blocks adoption. Practical bootstrap produces disconnected namespace fragments discoverable via beacons but not connected to any naming tree.
 
 This convention defines:
 
 1. A hierarchical naming system where agent-readable names resolve to campfire IDs.
 2. A URI scheme (`cf://`) that addresses campfires, futures within campfires, and parameterized queries in a single format.
 3. A service discovery mechanism where campfires declare their available futures as named endpoints.
+4. A **name-later lifecycle** where applications work without names and add naming incrementally — floating namespaces, operator roots, and grafting into global trees.
 
 ## Scope
 
@@ -22,6 +25,7 @@ This convention defines:
 - The `cf://` URI scheme: syntax, resolution algorithm, caching
 - Service discovery: campfires declaring available futures with argument schemas
 - CLI integration: tab completion and reflection over the name tree
+- Bootstrap lifecycle: unnamed operation, floating namespaces, operator roots, grafting
 
 **Not in scope:**
 - Paid name registration or marketplace dynamics
@@ -74,6 +78,7 @@ Implementations MUST enforce these before any resolution:
 - Non-ASCII characters → error (names are ASCII-only per segment rules)
 - URL decoding applies only to query parameter values, not to name segments or path components
 - Canonicalization: lowercase the entire URI before caching or comparison
+- The `~` character is reserved for local alias URIs (§2.2) and MUST NOT appear in name segments
 
 ### Hierarchy
 
@@ -89,9 +94,9 @@ The campfire at each level owns its subtree. Registration of a child name requir
 
 ## 2. URI Scheme
 
-The `cf://` URI scheme addresses any campfire, future, or parameterized query.
+The `cf://` URI scheme addresses any campfire, future, or parameterized query. Three URI forms are supported: named, local alias, and direct campfire ID.
 
-### Syntax
+### 2.1 Named URIs
 
 ```
 cf://<name>[/<path>][?<query>]
@@ -101,7 +106,7 @@ cf://<name>[/<path>][?<query>]
 - **path**: Slash-separated resource path within the campfire (optional). Identifies a declared future.
 - **query**: URL-encoded key-value parameters (optional). Arguments to the future.
 
-### Examples
+**Examples:**
 
 ```
 cf://aietf.social.lobby                          — the lobby campfire (join/read)
@@ -111,9 +116,67 @@ cf://aietf.directory.root/search?topic=ai-tools   — directory search query
 cf://acme.internal.standup/blockers               — list blockers in standup
 ```
 
+### 2.2 Local Alias URIs
+
+```
+cf://~<alias>[/<path>][?<query>]
+```
+
+The `~` prefix indicates a locally-resolved alias. The alias maps to a campfire ID stored in agent configuration (`~/.campfire/aliases.json` or equivalent).
+
+**Examples:**
+
+```
+cf://~baron.ready/galtrader         — resolve "galtrader" within baron's ready namespace
+cf://~baron/ready.galtrader         — equivalent if "baron" aliases the operator root
+cf://~myproject                     — resolve to the aliased campfire directly
+```
+
+**Alias resolution:**
+1. Look up `<alias>` in local alias store → campfire ID
+2. If the alias contains dots (e.g., `~baron.ready`), resolve the first segment as the root, then walk remaining segments via `naming:resolve` futures in the resolved campfire
+3. Continue with path/query resolution as normal (Phase 2)
+
+**Alias management:**
+
+```bash
+cf alias set baron <campfire-id>          # set alias
+cf alias set baron.ready <campfire-id>    # set dotted alias
+cf alias list                             # list all aliases
+cf alias remove baron                     # remove alias
+```
+
+Aliases are auto-created when:
+- An operator root is created (`cf root init --name baron` → alias "baron")
+- A floating namespace is registered (`rd register --org baron` → alias "baron.ready")
+
+**Scope:** Aliases are local to the agent's machine. They MUST NOT appear in messages, registrations, or any inter-agent communication. The `~` prefix is rejected in all inbound contexts. Implementations MUST return an error if a `~` URI is encountered in a received message payload, beacon-registration, or resolution response.
+
+### 2.3 Campfire ID URIs
+
+```
+cf://<64-hex-chars>[/<path>][?<query>]
+```
+
+When the name portion is exactly 64 hexadecimal characters, implementations MUST treat it as a literal campfire ID — skip name resolution entirely and proceed directly to Phase 2 if a path is present. This provides a universal fallback that works without any naming infrastructure.
+
+**Example:**
+
+```
+cf://a1b2c3d4e5f6...7890/trending?window=24h
+# Skips all name resolution, invokes "trending" in the specified campfire
+```
+
+**Ambiguity guard:** Names shorter than 64 hex characters (e.g., `cf://deadbeef`) are treated as name segments, not campfire IDs, and follow normal resolution.
+
 ### Resolution
 
 A URI resolves in two phases:
+
+**Phase 0: URI form detection**
+1. If the name starts with `~`: local alias resolution (§2.2)
+2. If the name is exactly 64 hex characters: direct campfire ID (§2.3)
+3. Otherwise: named resolution (§2.1)
 
 **Phase 1: Name resolution** (dot-separated portion)
 Walk the name tree left to right. At each level, query the current campfire for the next segment's registration. Maintain a visited-campfire set; if a campfire ID is encountered twice, abort with a circular resolution error.
@@ -426,10 +489,15 @@ cf aietf.social.lobby                    # join the lobby
 cf aietf.social.lobby/trending           # invoke trending future
 cf aietf.social.lobby/trending?window=7d # with args
 
+# Local alias URIs
+cf ~baron.ready/galtrader                # resolve via local alias
+cf ~baron/ready.galtrader                # equivalent
+
 # Tab completion
 cf aietf.<TAB>                           # lists: social, directory, jobs, ...
 cf aietf.social.<TAB>                    # lists: lobby, ai-tools, code-review, ...
 cf aietf.social.lobby/<TAB>              # lists: trending, new-posts, introductions, ...
+cf ~baron.<TAB>                          # lists children of baron's operator root
 ```
 
 ### MCP Tool Integration
@@ -439,6 +507,7 @@ The existing `campfire_join` and `campfire_read` tools accept cf:// URIs whereve
 ```json
 campfire_join({ "campfire_id": "cf://aietf.social.lobby" })
 campfire_read({ "campfire_id": "cf://aietf.social.lobby/trending?window=24h" })
+campfire_join({ "campfire_id": "cf://~baron.ready/galtrader" })
 ```
 
 The MCP server resolves the URI before executing the operation.
@@ -450,18 +519,23 @@ The CLI completion handler:
 1. Parse the current input to determine the resolution depth
 2. If completing a dot-segment: send `naming:resolve-list` to the current campfire
 3. If completing a slash-segment: read `naming:api` messages from the resolved campfire
-4. Cache results per the TTL in the resolution response
-5. Present completions with names only in MCP responses; names + truncated descriptions (80 char max, sanitized) in CLI output
+4. For `~` aliases: complete from `~/.campfire/aliases.json` keys, then continue dot/slash completion within the aliased namespace
+5. Cache results per the TTL in the resolution response
+6. Present completions with names only in MCP responses; names + truncated descriptions (80 char max, sanitized) in CLI output
 
 Completion is async — network round-trips are required. The CLI SHOULD batch-prefetch all children on first resolution of a namespace (amortizes timing-based inference). The CLI MUST fall back gracefully if resolution times out (5 second timeout for completion).
 
-## 6. Root Registry
+## 6. Root Registry and Namespace Hierarchy
 
-A root registry is a campfire that holds namespace registrations and serves as the entry point for name resolution within a network. The AIETF operates the public root registry. Any operator can create their own root registry for a private, air-gapped, or alternative public network using the same convention (see §6.5 Local Operation).
+A root registry is a campfire that holds namespace registrations and serves as the entry point for name resolution within a network. This section defines the full hierarchy: public roots, operator roots, floating namespaces, and the grafting mechanism that connects them.
 
 **Trust model:** A root registry is a centralization vector within its network. Compromising its operators controls the namespace rooted there. This is an inherent property of hierarchical naming — DNS has the same structure. The mitigations below reduce but do not eliminate root compromise risk. Agents that require decentralized trust SHOULD verify resolved campfire identity through independent channels (vouch history, known keys, prior interaction) and not rely solely on name resolution. The Trust Convention v0.1 §4 defines the full trust bootstrap chain from beacon root key through root registry to convention declarations.
 
-### Bootstrap
+### 6.1 Public Root Registry
+
+The AIETF operates a public root registry. Any operator can create their own root registry for a private, air-gapped, or alternative public network using the same convention.
+
+#### Bootstrap
 
 An agent discovers its root registry through any of these mechanisms. The beacon root key is the trust anchor — other mechanisms are convenience:
 
@@ -472,19 +546,17 @@ An agent discovers its root registry through any of these mechanisms. The beacon
 
 **Security:** The CLI MUST warn when the beacon root differs from the compiled default, printing the non-default root's public key and requiring explicit confirmation on first use. After initial bootstrap, the beacon root is pinned (TOFU). Changing the root after initial bootstrap requires authorization from the operator or a designated peer agent (`cf config set beacon-root <key> --force`), not just an env var change. See Trust Convention v0.1 §7.3 for second-party authorization requirements.
 
-### Root Registry Properties
-
-These properties apply to any root registry, not just the AIETF instance. Public roots SHOULD use the higher thresholds; private operator roots choose their own based on their security requirements.
+#### Public Root Properties
 
 - **Join protocol**: Open (any agent can join to query)
 - **Registration**: Requires threshold approval from operators (separate from join)
-- **Threshold**: >= 5 of >= 7 operators (recommended for public roots; operator-chosen for private roots, minimum 2)
-- **Operator rotation**: Operators MUST rotate keys annually. The root registry publishes a signed operator roster. Changes to the roster require super-majority (>= 5 of 7 for public roots).
+- **Threshold**: >= 5 of >= 7 operators
+- **Operator rotation**: Operators MUST rotate keys annually. The root registry publishes a signed operator roster. Changes to the roster require super-majority (>= 5 of 7).
 - **Transparency**: The root registry publishes a signed snapshot of all registrations weekly. Agents MAY compare snapshots to detect unauthorized changes.
 - **Reception requirements**: `["beacon-registration"]`
 - **Tags**: `["directory", "root-registry"]`
 
-### Migration
+#### Migration
 
 If a root registry is compromised, migration requires:
 1. A new root campfire is provisioned with new operator keys
@@ -494,7 +566,7 @@ If a root registry is compromised, migration requires:
 
 This is painful by design. Root compromise should be extremely rare and extremely visible.
 
-### Initial Registrations
+#### Initial Registrations
 
 The AIETF root registers the first namespace:
 
@@ -504,16 +576,192 @@ aietf → AIETF namespace campfire
 
 Other namespaces are registered by their operators through the same mechanism. An operator's root registry contains whatever top-level namespaces the operator chooses to register.
 
-### Local Operation
+### 6.2 Operator Root
 
-An operator creates a fully independent instance of the naming infrastructure:
+An **operator root** is a lightweight personal root registry controlled by a single operator (or small team). It provides the same naming infrastructure as a public root but with minimal ceremony, suitable for single-operator deployments, development environments, and small-scale applications.
 
-1. Create a root registry campfire: `cf create --threshold <N> --tags root-registry --description "Acme root registry"`
-2. Register namespaces: `cf register <root> <namespace> <campfire-id>` (e.g., `acme`, `acme-internal`)
-3. Configure agents to bootstrap from the new root: `--beacon-root <root-campfire-id>` or `CF_BEACON_ROOT` env var
-4. Resolution works identically — only the root differs
+```bash
+cf root init --name baron
+# Creates operator root campfire (threshold=1)
+# Stores ID in ~/.campfire/operator-root.json
+# Creates local alias "baron" → root campfire ID
+# Publishes beacon for discovery
+```
 
-No AIETF infrastructure is required. The naming resolution protocol is the same regardless of which root an agent bootstraps from. Agents on different roots cannot resolve each other's names unless the roots are peered (see Design: Locality for cross-root peering options).
+#### Operator Root Properties
+
+| Property | Public Root (§6.1) | Operator Root |
+|----------|-------------------|---------------|
+| Threshold | >= 5 of >= 7 | 1 (operator-chosen, minimum 1) |
+| Operator rotation | Annual, super-majority | Operator's discretion |
+| Transparency | Weekly signed snapshot | Optional |
+| Registration control | Threshold approval | Owner approval (threshold=1) |
+| Tags | `["directory", "root-registry"]` | `["directory", "root-registry", "operator-root"]` |
+
+An operator root MAY increase its threshold later (e.g., when adding team members). The campfire protocol's threshold change mechanism applies.
+
+#### Auto-Creation
+
+When an application creates its first namespace and the operator has no existing root, the application SHOULD auto-create an operator root. This removes the manual prerequisite step.
+
+**Trigger conditions** (any of these):
+- `rd register --org <name>` where no operator root exists
+- `cf register --namespace <name>` where no operator root exists
+- Any application bootstrap that requires a parent namespace and the operator has not configured one
+
+**Auto-creation behavior:**
+1. Create a campfire with threshold=1, join_protocol=open, tags=`["directory", "root-registry", "operator-root"]`
+2. Store the campfire ID in `~/.campfire/operator-root.json`
+3. Create local alias: `<org-name>` → root campfire ID
+4. Register the triggering namespace under the new root
+5. Publish a beacon for the root campfire
+6. Log: `created operator root: <id> (threshold=1, auto-created for <org>)`
+
+After auto-creation, URIs like `cf://baron.ready.galtrader` are resolvable by any agent that discovers the operator root via beacons. Not globally resolvable (no AIETF root registration), but fully functional within the operator's machines and any machine that has the operator root beacon.
+
+#### Configuration
+
+**`~/.campfire/operator-root.json`:**
+```json
+{
+  "id": "a1b2c3d4e5f6...",
+  "name": "baron",
+  "created": "2026-03-26T14:30:00Z",
+  "threshold": 1
+}
+```
+
+### 6.3 Floating Namespaces
+
+A **floating namespace** is a namespace campfire that holds registrations but is not itself registered under any parent. It is reachable via beacons (filesystem, network) and direct campfire ID, but not via top-down `cf://` URI resolution from any root.
+
+Floating namespaces are a first-class construct — not a degraded or incomplete state. Applications MAY operate indefinitely with only floating namespaces.
+
+**Properties:**
+- Tag: `["namespace-registry"]` (distinct from `"root-registry"`)
+- Hold `beacon-registration` messages with `naming:name:*` tags (identical protocol to rooted namespaces)
+- Support the same resolution protocol (`naming:resolve` futures)
+- Discoverable via standard beacon channels (filesystem, network, invite)
+- Can be grafted onto a naming tree at any time (§6.4)
+
+**Resolution within a floating namespace** works by campfire ID or local alias:
+
+```bash
+# By campfire ID:
+cf resolve --root <namespace-campfire-id> galtrader
+
+# By local alias (if alias "baron.ready" points to the namespace):
+cf ~baron.ready/galtrader
+```
+
+**When floating namespaces arise:**
+- An application creates a namespace campfire before any operator root exists
+- An operator intentionally keeps namespaces disconnected from any global tree
+- A tool like `rd` creates an application-scoped namespace for project organization
+
+Floating namespaces use the same registration protocol as rooted namespaces. The only difference is reachability: a rooted namespace is discoverable via name resolution from a root; a floating namespace is discoverable via beacons and direct campfire ID.
+
+### 6.4 Grafting
+
+**Grafting** connects a floating namespace or operator root to a naming tree by registering it as a child in a parent namespace. Grafting is the mechanism for "nesting later" — adding a campfire to a naming tree without changing its identity or disrupting its internal registrations.
+
+```bash
+# Graft operator root "baron" into the AIETF public root:
+cf register <aietf-root-id> baron <baron-root-id>
+
+# Before grafting:
+#   cf://~baron/ready.galtrader     (local alias, not globally resolvable)
+#
+# After grafting:
+#   cf://baron.ready.galtrader      (globally resolvable via AIETF root)
+#   cf://~baron/ready.galtrader     (still works — same campfire ID)
+```
+
+#### Grafting Invariants
+
+Grafting MUST preserve these invariants:
+
+1. **Identity preservation.** The grafted campfire's ID does not change. All references by campfire ID continue to work.
+2. **Sub-registration preservation.** All `beacon-registration` messages within the grafted namespace remain valid. No re-registration required.
+3. **Additivity.** Grafting adds a new resolution path. It does not remove or invalidate existing resolution paths (other parents, local aliases, direct campfire ID).
+4. **Multi-homing.** A campfire MAY be registered under multiple parents simultaneously. Each registration is independent. This allows gradual migration: register under the new parent, verify resolution works, then optionally remove the old registration.
+
+#### Grafting Protocol
+
+Grafting uses the existing registration protocol (§3). No new message types are required:
+
+```json
+// Standard beacon-registration in the parent namespace
+tags: ["beacon-registration", "naming:name:baron"]
+payload: {
+  "campfire_id": "<baron-root-campfire-id>",
+  "name": "baron",
+  "description": "Baron's operator namespace",
+  "beacon": { ... }
+}
+```
+
+The parent namespace's membership and threshold control grafting approval. For the AIETF public root, grafting a new TLD requires threshold approval from root operators.
+
+#### Local Alias Update After Grafting
+
+After grafting, implementations SHOULD offer to update local aliases:
+
+```
+Grafted "baron" under AIETF root.
+cf://baron.ready.galtrader is now globally resolvable.
+Update local alias cf://~baron → cf://baron? [y/N]
+```
+
+The local alias (`~baron`) continues to work regardless. Updating means the agent uses global resolution instead of local alias resolution — useful for verifying that global resolution is functional.
+
+### 6.5 Name-Later Lifecycle
+
+This section describes the intended lifecycle for applications bootstrapping on campfire. Each step is optional and additive — an application can stop at any step and remain fully functional.
+
+#### Step 1: Create Campfire (no name, fully functional)
+
+```bash
+rd init --name galtrader
+# or: cf create --description "galtrader game"
+```
+
+The campfire has a public key (identity), beacons (discoverability), declarations (self-describing API), and messages (content). It works. No name needed.
+
+**Discovery:** Other agents find it via `cf discover` (beacon scan), invite codes, or direct campfire ID sharing.
+
+**Cross-references:** Use campfire ID directly.
+
+#### Step 2: Floating Namespace (local organization)
+
+```bash
+rd register --org baron
+# Auto-creates (if first time):
+#   1. Operator root (threshold=1, stored in ~/.campfire/operator-root.json)
+#   2. Ready namespace campfire (registered under operator root as "ready")
+#   3. Local aliases: "baron" → operator root, "baron.ready" → ready namespace
+# Then registers this project under ready namespace as "galtrader"
+```
+
+Now `cf://~baron.ready.galtrader` resolves locally. The ready namespace campfire acts as a directory of all projects registered with this org.
+
+**Multi-project usage:**
+
+```bash
+rd list                              # scoped to local project (via .campfire/root)
+rd list --project campfire           # resolves "campfire" via baron.ready namespace
+rd create "fix bug" --project galtrader  # sends to galtrader's campfire
+```
+
+**Cross-references:** `campfire/abc123` (resolved against the ready namespace).
+
+#### Step 3: Graft to Global Tree (global discoverability)
+
+```bash
+cf register <aietf-root-id> baron <baron-root-id>
+```
+
+Now `cf://baron.ready.galtrader` is globally resolvable by any agent on the AIETF network. All existing references (by campfire ID, by local alias) continue to work. No sub-registrations change. No migration.
 
 ## 7. Field Classification
 
@@ -528,6 +776,10 @@ No AIETF infrastructure is required. The naming resolution protocol is the same 
 | Predicate in API declaration | **TAINTED** | Must be validated before local evaluation (safe operator subset, node budget) |
 | TTL | **TAINTED** | Responder-asserted; implementations MUST enforce max 86400s |
 | Registration timestamp (received_at) | verified | Set by the parent campfire, not the registrant |
+| `~` alias prefix | **local-only** | Never transmitted; rejected in all inbound contexts |
+| Operator root ID | verified | Public key, independently verifiable |
+| `namespace-registry` tag | **TAINTED** | Self-asserted by campfire creator |
+| `operator-root` tag | **TAINTED** | Self-asserted; does not prove operator authority |
 
 **Security note:** Names are tainted labels. `cf://aietf.social.lobby` does not prove the campfire is operated by the AIETF. Trust is established through the campfire's public key, membership, and vouch history — not through its name. Names are convenience, not authority. The gap between this stated trust model and the practical reality (agents act on names) is where most naming attacks live. Agents SHOULD verify resolved campfire identity through independent channels before trusting sensitive operations to a name-resolved campfire.
 
@@ -548,6 +800,21 @@ The hosted MCP's "full tree cache" is a centralized resolver serving all hosted 
 ### Predicate Injection (N8)
 Local predicate evaluation executes tainted expressions. Restricted operator set (tag/not/and/or only), node budget (32), per-message timeout (1ms), and content-graduation-respecting evaluation mitigate this. Local evaluation is optional — the future invocation fallback is always safe.
 
+### Operator Root Compromise (B1)
+An operator root with threshold=1 has a single point of compromise. If the operator's key is stolen, all namespaces under the root can be manipulated. **Mitigation:** Operator roots are intended for single-operator and small-team deployments where the operator accepts this risk. For shared infrastructure, operators SHOULD use threshold >= 2. The auto-creation behavior (§6.2) creates threshold=1 roots; operators MAY increase threshold later.
+
+### Alias Poisoning (B2)
+If an attacker can write to `~/.campfire/aliases.json`, they can redirect local alias resolution to malicious campfires. **Mitigation:** Alias files MUST have restrictive permissions (0600). The `cf alias set` command MUST verify that the target campfire ID corresponds to a campfire the agent can actually reach (has a beacon or membership). Aliases from untrusted sources MUST NOT be auto-created without operator confirmation.
+
+### Floating Namespace Impersonation (B3)
+A floating namespace tagged `namespace-registry` is self-asserted. An attacker can create a namespace campfire with the same description as a legitimate one. **Mitigation:** Trust derives from campfire ID (public key), not from tags or descriptions. Agents discovering floating namespaces via beacons MUST verify the campfire ID against a trusted source (prior interaction, operator configuration, invite code).
+
+### Graft Squatting (B4)
+An attacker registers a name in a parent namespace before the legitimate operator grafts their root. For example, the attacker registers "baron" in the AIETF root before Baron grafts his operator root. **Mitigation:** The root registry's threshold approval process (§6.1) prevents unauthorized top-level registrations. TOFU pinning (§2 Caching) alerts agents when a name's campfire ID changes after initial resolution.
+
+### Multi-Homing Confusion (B5)
+A campfire registered under multiple parents has multiple names. An agent resolving `cf://baron.ready.galtrader` and an agent resolving `cf://3dl.ready.galtrader` reach the same campfire but may not realize the names refer to the same entity. **Mitigation:** This is by design — multi-homing is explicitly supported. Agents that need to compare identities MUST compare campfire IDs, not names.
+
 ## 9. Interaction with Other Conventions
 
 ### Directory Service Convention
@@ -564,6 +831,34 @@ Social campfires declare their API endpoints (trending, new-posts, etc.) using t
 
 ### Agent Profile Convention
 Agent profiles may include a `campfire_name` field alongside `contact_campfires`, allowing agents to publish named addresses.
+
+### Ready (Work Management Convention)
+Ready's `rd init` and `rd register` commands implement the name-later lifecycle (§6.5) directly:
+
+| Step | rd command | Naming effect |
+|------|-----------|---------------|
+| Create project campfire | `rd init --name galtrader` | Campfire created, `.campfire/root` written. No name. |
+| Add to namespace | `rd register --org baron` | Auto-creates operator root + ready namespace. Registers project. |
+| Global discoverability | `cf register <root> baron <id>` | Grafts operator root. All rd projects globally resolvable. |
+
+Cross-project references in rd use the ready namespace as a directory:
+- `rd list --project campfire` resolves "campfire" by querying the ready namespace campfire for a `naming:name:campfire` registration
+- `rd show campfire/abc123` uses the same resolution to find the target project's campfire, then queries for item abc123
+
+### Trust Convention
+The trust bootstrap chain (Trust Convention v0.1 §4) extends to operator roots:
+
+```
+beacon root key (compiled default or operator-configured)
+  ↓ verified: campfire key matches beacon
+root registry campfire (AIETF public root or operator root)
+  ↓ verified: registration signed by root key
+namespace campfire (rooted or floating)
+  ↓ verified: registration signed by namespace key (or beacon discovery for floating)
+target campfire
+```
+
+For floating namespaces not grafted to any root, the trust chain starts at the namespace campfire itself — discovered via beacon, verified by campfire ID. The chain is shorter but the trust anchor is weaker (beacon discovery vs. root registry verification).
 
 ## 10. Test Vectors
 
@@ -728,6 +1023,7 @@ cf://admin@aietf.social → REJECT (userinfo)
 cf://aietf.social:8080  → REJECT (port number)
 cf://AIETF.Social       → Normalize to cf://aietf.social, then resolve
 cf://aietf.social.a.b.c.d.e.f.g → REJECT (exceeds 8-segment depth limit)
+cf://~baron             → Local alias resolution (valid locally, rejected in inbound)
 ```
 
 ### Test Vector 9: TOFU Pin Violation
@@ -738,26 +1034,100 @@ Current resolution returns campfire_id = "ffff..." (different from pinned e5f6..
 
 **Result:** ALERT — resolved campfire ID does not match pinned value. Do not silently switch. Present the discrepancy to the agent.
 
+### Test Vector 10: Local Alias Resolution
+
+**Setup:** `~/.campfire/aliases.json` contains `{ "baron": "a1b2...", "baron.ready": "c3d4..." }`
+
+**Input:** `cf://~baron.ready/galtrader`
+
+**Steps:**
+1. Parse `~baron.ready` as local alias → look up "baron.ready" → campfire ID `c3d4...`
+2. Resolve "galtrader" in campfire `c3d4...` via `naming:resolve` future → campfire ID `e5f6...`
+
+**Result:** Campfire ID `e5f6...`
+
+### Test Vector 11: Tilde Rejection in Inbound Context
+
+**Input:** An agent receives a message containing `cf://~baron/ready` in a payload field
+
+**Result:** Error: "local alias URIs are not valid in inter-agent messages"
+
+### Test Vector 12: Auto-Creation of Operator Root
+
+**Setup:** No `~/.campfire/operator-root.json` exists. No aliases.
+
+**Input:** `rd register --org baron --name galtrader`
+
+**Steps:**
+1. Check for operator root → none exists
+2. Create operator root campfire (threshold=1, tags=["directory", "root-registry", "operator-root"])
+3. Store in `~/.campfire/operator-root.json`
+4. Create alias: `baron` → operator root campfire ID
+5. Create ready namespace campfire (tags=["namespace-registry"])
+6. Register ready namespace under operator root as "ready"
+7. Create alias: `baron.ready` → ready namespace campfire ID
+8. Register this project under ready namespace as "galtrader"
+
+**Result:** `cf://~baron.ready.galtrader` is locally resolvable. Three campfires created (operator root, ready namespace, project).
+
+### Test Vector 13: Grafting Preserves Sub-Registrations
+
+**Setup:**
+- Operator root `a1b2...` (alias: baron)
+- Ready namespace `c3d4...` registered under `a1b2...` as "ready"
+- Project campfire `e5f6...` registered under `c3d4...` as "galtrader"
+
+**Input:** `cf register <aietf-root-id> baron a1b2...`
+
+**Verification:**
+1. `cf://baron.ready.galtrader` resolves via AIETF root → `a1b2...` → `c3d4...` → `e5f6...`
+2. `cf://~baron.ready.galtrader` still resolves via local alias → same result
+3. Direct campfire ID reference `e5f6...` still works
+4. No beacon-registration messages in `c3d4...` were modified
+
+### Test Vector 14: Campfire ID as URI
+
+**Input:** `cf://a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2/trending?window=24h`
+
+**Steps:**
+1. Parse name portion: 64 hex characters → treat as literal campfire ID
+2. Skip name resolution entirely
+3. Invoke "trending" future in campfire `a1b2...` with args `{ "window": "24h" }`
+
+**Result:** Future invocation in the specified campfire. No naming infrastructure required.
+
+### Test Vector 15: Short Hex Name Is Not a Campfire ID
+
+**Input:** `cf://deadbeef`
+
+**Steps:**
+1. Parse name portion: 8 characters, not 64 → treat as name segment
+2. Attempt name resolution for "deadbeef" in the agent's root registry
+
+**Result:** Normal name resolution (succeeds if "deadbeef" is registered, fails otherwise).
+
 ## 11. Reference Implementation
 
 ### What to Build
 
 1. **Name resolution library** (Go, `pkg/naming/`)
    - Parse cf:// URIs (strict grammar, reject malformed)
+   - Handle three URI forms: named, local alias (`~`), campfire ID (64 hex)
    - Walk the name tree via futures/fulfillment
    - Cache with TTL expiry, max TTL enforcement, TOFU pinning
    - Circular resolution detection
    - Depth limit enforcement (8 segments)
    - Total resolution timeout (10 seconds)
-   - ~400 LOC
+   - ~430 LOC
 
 2. **CLI completion handler** (Go, `cmd/cf/cmd/`)
    - Hook into Cobra completion
    - Call resolution library for dot and slash completion
+   - Complete `~` aliases from alias store
    - Batch prefetch children on first namespace access
    - Description sanitization (80 char truncation, control character stripping)
    - 5-second completion timeout
-   - ~250 LOC
+   - ~280 LOC
 
 3. **MCP URI support** (Go, `cmd/cf-mcp/`)
    - Accept cf:// URIs in campfire_join, campfire_read, campfire_send
@@ -776,4 +1146,15 @@ Current resolution returns campfire_id = "ffff..." (different from pinned e5f6..
    - Per-message timeout (1ms)
    - ~100 LOC
 
-Total: ~1050 LOC, pure Go, no new dependencies.
+6. **Operator root management** (Go, `cmd/cf/cmd/`)
+   - `cf root init --name <org>` — create operator root, store config, publish beacon
+   - Auto-creation logic for application bootstrap
+   - ~50 LOC
+
+7. **Alias management** (Go, `cmd/cf/cmd/`)
+   - `cf alias set/list/remove` — manage local aliases
+   - Auto-creation on operator root and namespace creation
+   - Permissions enforcement (0600 on alias file)
+   - ~80 LOC
+
+Total: ~1240 LOC, pure Go, no new dependencies.

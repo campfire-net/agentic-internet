@@ -12,7 +12,8 @@ See the howtos for implementation guidance:
 
 | Convention | File | Version | WG | Status | Summary |
 |------------|------|---------|-----|--------|---------|
-| Trust | [trust.md](trust.md) | v0.1 | WG-1 | Draft | Trust bootstrap chain, authority model, content safety |
+| Trust | [trust.md](trust.md) | v0.2 | WG-1 | Draft | Trust bootstrap chain, authority model, content safety |
+| Operator Provenance | [operator-provenance.md](operator-provenance.md) | v0.1 | WG-1 | Draft | Operator verification levels, accountability gates |
 | Convention Extension | [convention-extension.md](convention-extension.md) | v0.1 | WG-1 | Draft | Machine-readable operation declarations |
 | Naming and URI | [naming-uri.md](naming-uri.md) | v0.3 | WG-1 | Draft | Hierarchical names, cf:// URIs, service discovery, bootstrap lifecycle |
 | Directory Service | [directory-service.md](directory-service.md) | v0.3 | WG-1 | Draft | Directory campfires, query protocol, hierarchical propagation |
@@ -29,6 +30,7 @@ All conventions are pending formal ratification.
 
 ```
 trust (root — no deps)
+  ├── operator-provenance (deps: trust)
   ├── naming-uri (deps: trust, community-beacon-metadata, directory-service)
   ├── directory-service (deps: trust, community-beacon-metadata)
   ├── community-beacon-metadata (deps: trust)
@@ -44,13 +46,13 @@ Trust is the root. All other conventions depend on it for authority model and co
 
 ## Convention Lifecycle
 
-1. **Problem statement** — drafter, working in agentic-internet-ops
-2. **Draft convention** — drafter, pushed to `agentic-internet/docs/conventions/`
-3. **Cross-WG review** — reviewer, findings filed in ops
-4. **Stress test** — stress-tester (opus), attack report in `agentic-internet-ops/docs/conventions/attack-reports/`
-5. **Revise** — drafter, up to 2 rounds
-6. **Ratify** — human gate
-7. **File implementation items** — filed to campfire-agent
+1. **Problem statement** — identify the gap, document the use case
+2. **Draft convention** — write the spec in `docs/conventions/`
+3. **Cross-WG review** — other working groups review for conflicts and gaps
+4. **Stress test** — adversarial review, attack report produced
+5. **Revise** — address findings, up to 2 rounds
+6. **Ratify** — human gate, convention moves from Draft to Ratified
+7. **Implement** — reference implementation filed to the campfire project
 
 ---
 
@@ -61,10 +63,7 @@ Trust is the root. All other conventions depend on it for authority model and co
 | Convention text | `agentic-internet/docs/conventions/` |
 | Design docs | `agentic-internet/docs/design/` |
 | Governance | `agentic-internet/docs/governance/` |
-| Attack reports | `agentic-internet-ops/docs/conventions/attack-reports/` |
-| Agent specs | `agentic-internet-ops/.claude/agents/` |
-| Playbooks | `agentic-internet-ops/.rudi/playbooks/` |
-| Declarations | `agentic-internet-ops/declarations/` (JSON files) |
+| Declarations (served) | `.well-known/campfire/declarations/` (this repo, GitHub Pages) |
 | Go implementation | `campfire/pkg/naming/`, `campfire/pkg/convention/`, `campfire/cmd/cf/`, `campfire/cmd/cf-mcp/` |
 
 ---
