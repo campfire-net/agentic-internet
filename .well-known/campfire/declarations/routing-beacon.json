@@ -7,14 +7,14 @@
     {"tag": "routing:beacon", "cardinality": "exactly_one"}
   ],
   "args": [
-    {"name": "campfire_id", "type": "key", "required": true, "description": "Campfire public key to advertise"},
+    {"name": "campfire", "type": "key", "required": true, "description": "Target campfire — name, alias, cf:// URI, or ID"},
     {"name": "endpoint", "type": "string", "required": true, "description": "Transport endpoint URL"},
     {"name": "transport", "type": "string", "required": true, "recommended_values": ["p2p-http", "filesystem", "github"], "description": "Transport protocol (open string — recommended values listed, new transports do not require a declaration update)"},
     {"name": "description", "type": "string", "required": false, "max_length": 280, "description": "Human-readable campfire description"},
     {"name": "join_protocol", "type": "enum", "values": ["open", "invite-only"], "required": true, "description": "Campfire join protocol"},
-    {"name": "timestamp", "type": "number", "required": true, "description": "Unix epoch seconds, covered by inner_signature"},
+    {"name": "timestamp", "type": "integer", "required": true, "description": "Unix epoch seconds, covered by inner_signature"},
     {"name": "convention_version", "type": "string", "required": true, "description": "Convention version that produced this beacon (e.g., '0.4.1')"},
-    {"name": "inner_signature", "type": "string", "required": true, "description": "Beacon signed by campfire key (hex) — covers campfire_id, endpoint, transport, description, join_protocol, timestamp, convention_version"}
+    {"name": "inner_signature", "type": "string", "required": true, "description": "Beacon signed by campfire key (hex) — covers campfire, endpoint, transport, description, join_protocol, timestamp, convention_version"}
   ],
   "payload_required": true,
   "signing": "campfire_key",

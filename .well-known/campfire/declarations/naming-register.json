@@ -4,11 +4,10 @@
   "operation": "register",
   "description": "Register a name in a parent namespace campfire",
   "produces_tags": [
-    {"tag": "beacon:registration", "cardinality": "exactly_one"},
-    {"tag": "naming:name:*", "cardinality": "exactly_one"}
+    {"tag": "beacon:registration", "cardinality": "exactly_one"}
   ],
   "args": [
-    {"name": "campfire_id", "type": "key", "required": true, "description": "Campfire to register"},
+    {"name": "campfire", "type": "key", "required": true, "description": "Target campfire — name, alias, cf:// URI, or ID"},
     {"name": "name", "type": "string", "required": true, "pattern": "[a-z0-9][a-z0-9-]{0,61}[a-z0-9]|[a-z0-9]", "max_length": 63, "description": "Name segment to register"},
     {"name": "description", "type": "string", "required": false, "max_length": 280, "description": "Description of registered campfire"}
   ],

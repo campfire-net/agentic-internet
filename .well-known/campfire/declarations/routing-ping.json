@@ -12,5 +12,5 @@
   ],
   "payload_required": true,
   "signing": "member_key",
-  "rate_limit": {"max": 1, "per": "target", "window": "10m"}
+  "rate_limit": {"max": 1, "per": "sender", "window": "10m"}
 }
