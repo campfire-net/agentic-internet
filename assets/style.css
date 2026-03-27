@@ -295,6 +295,7 @@
   line-height: 1.7;
   overflow-x: auto;
   max-width: var(--ds-doc-width);
+  white-space: pre;
 }
 
 .quickstart-block .comment { color: #4a4a4a; }
