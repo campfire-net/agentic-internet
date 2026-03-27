@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+"""Generate markdown fragments from convention declarations.
+
+Reads JSON declarations from .well-known/campfire/declarations/,
+emits markdown tables into sentinel-marked regions in target docs.
+
+Sentinel format:
+  <!-- BEGIN GENERATED:section_name -->
+  ...generated content replaced on each run...
+  <!-- END GENERATED:section_name -->
+
+Usage:
+  bin/gen-docs                  # update all sentinel-marked docs
+  bin/gen-docs --check          # exit 1 if any file would change (for CI)
+  bin/gen-docs --list           # list files that would be updated
+"""
+
+import json
+import sys
+import re
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+DECL_DIR = REPO_ROOT / ".well-known" / "campfire" / "declarations"
+
+# Files containing sentinel markers
+TARGET_DOCS = [
+    REPO_ROOT / "docs" / "agent-bootstrap.md",
+    REPO_ROOT / "docs" / "cf-brief.md",
+    REPO_ROOT / "docs" / "user-manual.md",
+]
+
+SENTINEL_RE = re.compile(
+    r"(<!-- BEGIN GENERATED:(\w+) -->\n)"
+    r"(.*?)"
+    r"(<!-- END GENERATED:\2 -->)",
+    re.DOTALL,
+)
+
+
+def load_declarations():
+    """Load all declaration JSON files, sorted by convention then operation."""
+    decls = []
+    for f in sorted(DECL_DIR.glob("*.json")):
+        with open(f) as fh:
+            d = json.load(fh)
+            d["_file"] = f.name
+            decls.append(d)
+    # Sort: infrastructure first (naming, beacon, routing), then app conventions
+    order = {
+        "naming-uri": 0,
+        "community-beacon-metadata": 1,
+        "routing": 2,
+        "agent-profile": 3,
+        "operator-provenance": 4,
+        "social-post-format": 5,
+    }
+    decls.sort(key=lambda d: (order.get(d["convention"], 99), d["operation"]))
+    return decls
+
+
+def fmt_args_brief(args):
+    """Format args as compact string: --name (type), --name2 (type)."""
+    parts = []
+    for a in args:
+        req = "" if a.get("required") else "?"
+        parts.append(f"`--{a['name']}`{req}")
+    return ", ".join(parts) if parts else "none"
+
+
+def fmt_args_detail(args):
+    """Format args as compact string with types."""
+    parts = []
+    for a in args:
+        marker = "" if a.get("required") else " (opt)"
+        parts.append(f"`--{a['name']}` {a['type']}{marker}")
+    return ", ".join(parts) if parts else "none"
+
+
+def fmt_rate_limit(decl):
+    """Format rate limit as compact string."""
+    rl = decl.get("rate_limit")
+    if not rl:
+        return ""
+    return f"{rl['max']}/{rl['per']}/{rl['window']}"
+
+
+def generate_operations_table(decls):
+    """Full operations table with args and signing."""
+    lines = [
+        "| Operation | Convention | Args | Signing | Rate Limit |",
+        "|-----------|-----------|------|---------|------------|",
+    ]
+    for d in decls:
+        op = d["operation"]
+        conv = d["convention"]
+        args = fmt_args_brief(d.get("args", []))
+        signing = d.get("signing", "member_key")
+        rl = fmt_rate_limit(d)
+        lines.append(f"| `{op}` | {conv} | {args} | {signing} | {rl} |")
+    return "\n".join(lines) + "\n"
+
+
+def generate_operations_compact(decls):
+    """Compact operations list grouped by convention."""
+    groups = {}
+    for d in decls:
+        conv = d["convention"]
+        if conv not in groups:
+            groups[conv] = []
+        groups[conv].append(d)
+
+    lines = []
+    for conv, ops in groups.items():
+        op_names = ", ".join(f"`{d['operation']}`" for d in ops)
+        lines.append(f"- **{conv}**: {op_names}")
+    return "\n".join(lines) + "\n"
+
+
+def generate_convention_stack(decls):
+    """Convention stack summary table."""
+    convs = {}
+    for d in decls:
+        c = d["convention"]
+        if c not in convs:
+            convs[c] = {"version": d["version"], "ops": []}
+        convs[c]["ops"].append(d["operation"])
+
+    lines = [
+        "| Convention | Version | Operations |",
+        "|-----------|---------|------------|",
+    ]
+    for conv, info in convs.items():
+        ops = ", ".join(f"`{o}`" for o in info["ops"])
+        lines.append(f"| {conv} | {info['version']} | {ops} |")
+    return "\n".join(lines) + "\n"
+
+
+def generate_operations_detail(decls):
+    """Detailed operations table with arg types."""
+    lines = [
+        "| Operation | Convention | Args | Signing | Rate Limit |",
+        "|-----------|-----------|------|---------|------------|",
+    ]
+    for d in decls:
+        op = d["operation"]
+        conv = d["convention"]
+        args = fmt_args_detail(d.get("args", []))
+        signing = d.get("signing", "member_key")
+        rl = fmt_rate_limit(d)
+        lines.append(f"| `{op}` | {conv} | {args} | {signing} | {rl} |")
+    return "\n".join(lines) + "\n"
+
+
+# Map section names to generator functions
+GENERATORS = {
+    "operations_table": generate_operations_table,
+    "operations_compact": generate_operations_compact,
+    "operations_detail": generate_operations_detail,
+    "convention_stack": generate_convention_stack,
+}
+
+
+def process_file(filepath, decls, check_only=False):
+    """Replace sentinel regions in a file. Returns True if file changed."""
+    if not filepath.exists():
+        return False
+
+    content = filepath.read_text()
+    original = content
+
+    def replacer(match):
+        prefix = match.group(1)
+        section = match.group(2)
+        suffix = match.group(4)
+        if section not in GENERATORS:
+            print(f"  warning: unknown section '{section}' in {filepath.name}", file=sys.stderr)
+            return match.group(0)
+        generated = GENERATORS[section](decls)
+        return f"{prefix}{generated}{suffix}"
+
+    content = SENTINEL_RE.sub(replacer, content)
+
+    changed = content != original
+    if changed and not check_only:
+        filepath.write_text(content)
+    return changed
+
+
+def main():
+    check_only = "--check" in sys.argv
+    list_only = "--list" in sys.argv
+
+    decls = load_declarations()
+    print(f"Loaded {len(decls)} declarations from {DECL_DIR.relative_to(REPO_ROOT)}")
+
+    any_changed = False
+    for doc in TARGET_DOCS:
+        if not doc.exists():
+            continue
+        changed = process_file(doc, decls, check_only=check_only or list_only)
+        rel = doc.relative_to(REPO_ROOT)
+        if changed:
+            any_changed = True
+            if list_only:
+                print(f"  would update: {rel}")
+            elif check_only:
+                print(f"  stale: {rel}")
+            else:
+                print(f"  updated: {rel}")
+        else:
+            print(f"  up to date: {rel}")
+
+    if check_only and any_changed:
+        print("\nGenerated docs are stale. Run: make docs")
+        sys.exit(1)
+
+    if not any_changed:
+        print("\nAll generated sections are up to date.")
+
+
+if __name__ == "__main__":
+    main()
