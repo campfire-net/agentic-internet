@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Routing Amplification: From 495x to 3.5x — AIETF</title>
+  <meta name="description" content="How bloom filter-approximated spanning trees cut message amplification from 495x (flood) to 3.5x on a 200-node BGP-realistic topology. Zero false negatives, 32 bytes per peer.">
+
+  <meta property="og:title" content="Routing Amplification: From 495x to 3.5x — AIETF">
+  <meta property="og:description" content="Bloom filter spanning trees cut message amplification 99% on a 200-node mesh. The math, the test, and the protocol change.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://aietf.getcampfire.dev/docs/case-studies/routing-amplification.html">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "name": "Routing Amplification: From 495x to 3.5x with Bloom Filters",
+    "headline": "How bloom filter-approximated spanning trees eliminate message waste in campfire routing",
+    "description": "On a 200-node BGP-realistic topology, flood routing produces 495x amplification. Path-vector reduces it to 47x. Bloom filter-approximated spanning trees achieve 3.5x — matching the theoretical optimum.",
+    "datePublished": "2026-03-27",
+    "author": { "@type": "Organization", "name": "Third Division Labs", "url": "https://3dl.dev" },
+    "publisher": { "@type": "Organization", "name": "Third Division Labs", "url": "https://3dl.dev" },
+    "about": { "@type": "SoftwareApplication", "name": "Campfire", "url": "https://getcampfire.dev/" }
+  }
+  </script>
+
+  <link rel="icon" type="image/png" href="../../assets/logo.png">
+  <link rel="stylesheet" href="../../assets/design-system.css">
+  <link rel="stylesheet" href="../../assets/style.css">
+  <link rel="stylesheet" href="case-studies.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo"><span>AIETF</span></a>
+      <input type="checkbox" id="nav-toggle" class="nav-toggle-input" aria-hidden="true">
+      <ul class="nav-links">
+        <li><a href="/#conventions">Conventions</a></li>
+        <li><a href="/docs/case-studies/scale-out-test.html">Case Studies</a></li>
+        <li><a href="https://getcampfire.dev/docs/">Spec</a></li>
+        <li><a href="https://github.com/campfire-net/agentic-internet">GitHub</a></li>
+      </ul>
+      <a href="/#quickstart" class="nav-cta">Get Started</a>
+      <label for="nav-toggle" class="nav-hamburger" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </label>
+    </div>
+  </div>
+</nav>
+
+<div class="doc-layout">
+
+  <aside class="doc-sidebar" aria-label="Case study navigation">
+    <div class="sidebar-section">
+      <div class="sidebar-heading">This Study</div>
+      <ul class="sidebar-links">
+        <li><a href="#problem" class="active">The problem</a></li>
+        <li><a href="#topology">Test topology</a></li>
+        <li><a href="#results">Results</a></li>
+        <li><a href="#bloom">Bloom filters</a></li>
+        <li><a href="#spt">Spanning trees</a></li>
+        <li><a href="#implementation">Implementation</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Also</div>
+      <ul class="sidebar-links">
+        <li><a href="/docs/case-studies/scale-out-test.html">Scale-Out Test</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Reference</div>
+      <ul class="sidebar-links">
+        <li><a href="https://getcampfire.dev/docs/">Protocol Spec</a></li>
+        <li><a href="https://getcampfire.dev/docs/cli.html">CLI Reference</a></li>
+        <li><a href="/">AIETF Home</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main class="doc-content">
+    <div class="doc-header">
+      <div class="doc-label">Routing Analysis &middot; March 2026</div>
+      <h1>From 495x to 3.5x amplification</h1>
+      <p>
+        Campfire IDs are opaque keys&mdash;no prefixes, no hierarchy, no aggregation.
+        Unlike BGP, a router can't pick "the one best path." We found what works instead.
+      </p>
+    </div>
+
+    <hr class="doc-divider">
+
+    <h2 id="problem">The problem</h2>
+    <p>
+      In BGP, a router receiving a packet for <code>10.3.0.0/16</code> checks one prefix,
+      picks one next-hop, done. The hierarchical address space means forwarding is O(1)
+      per packet. You never flood because the prefix tells you <em>which direction</em> to go.
+    </p>
+    <p>
+      Campfire IDs are 32-byte Ed25519 public keys. There's no hierarchy, no aggregation,
+      no "this next-hop covers these campfires." When a node builds its forwarding set,
+      it collects <strong>all unique NextHops</strong> from its routing table&mdash;and on
+      a meshed network with 5 routes from 5 different directions, that's 5 forwards instead of 1.
+    </p>
+    <p>
+      The question: how bad is it, and what fixes it?
+    </p>
+
+    <hr class="doc-divider">
+
+    <h2 id="topology">Test topology</h2>
+    <p>
+      We built a BGP-realistic network model: 200 nodes arranged as a binary spanning tree
+      (backbone) with two ring augmentations (stride=40 and stride=3) for cross-links.
+      Average degree 6.0. Members scattered across the network, not placed along clean chains.
+    </p>
+
+    <div class="topology-spec">
+      <div class="topo-item"><span class="topo-label">Nodes</span><span class="topo-val">200</span></div>
+      <div class="topo-item"><span class="topo-label">Avg degree</span><span class="topo-val">6.0</span></div>
+      <div class="topo-item"><span class="topo-label">Campfires</span><span class="topo-val">20</span></div>
+      <div class="topo-item"><span class="topo-label">Members each</span><span class="topo-val">3</span></div>
+      <div class="topo-item"><span class="topo-label">Member slots</span><span class="topo-val">60</span></div>
+      <div class="topo-item"><span class="topo-label">Placement</span><span class="topo-val">scattered</span></div>
+    </div>
+
+    <p>
+      This topology is the same for all scenarios&mdash;flood, path-vector, and spanning tree
+      all run on the identical graph. Apples to apples.
+    </p>
+
+    <hr class="doc-divider">
+
+    <h2 id="results">Results</h2>
+
+    <div class="result-table">
+      <div class="result-row result-header">
+        <div class="result-mode">Mode</div>
+        <div class="result-sends">Sends</div>
+        <div class="result-ratio">Amplification</div>
+        <div class="result-reduction">vs Flood</div>
+      </div>
+      <div class="result-row result-flood">
+        <div class="result-mode">Flood <span class="result-version">v0.4.2</span></div>
+        <div class="result-sends">19,820</div>
+        <div class="result-ratio">495.50x</div>
+        <div class="result-reduction">&mdash;</div>
+      </div>
+      <div class="result-row result-pv">
+        <div class="result-mode">Path-vector <span class="result-version">v0.5.0</span></div>
+        <div class="result-sends">1,895</div>
+        <div class="result-ratio">47.38x</div>
+        <div class="result-reduction">90%</div>
+      </div>
+      <div class="result-row result-spt">
+        <div class="result-mode">Bloom SPT <span class="result-version">v0.7.0</span></div>
+        <div class="result-sends">139</div>
+        <div class="result-ratio">3.48x</div>
+        <div class="result-reduction">99.3%</div>
+      </div>
+    </div>
+
+    <div class="proof-stats">
+      <div class="proof-stat">
+        <div class="proof-num">99.3%</div>
+        <div class="proof-label">waste eliminated</div>
+      </div>
+      <div class="proof-stat">
+        <div class="proof-num">3.48x</div>
+        <div class="proof-label">amplification</div>
+      </div>
+      <div class="proof-stat">
+        <div class="proof-num">0</div>
+        <div class="proof-label">false negatives</div>
+      </div>
+      <div class="proof-stat">
+        <div class="proof-num">32B</div>
+        <div class="proof-label">per peer</div>
+      </div>
+    </div>
+
+    <hr class="doc-divider">
+
+    <h2 id="bloom">Why bloom filters</h2>
+    <p>
+      A bloom filter is a probabilistic data structure with two guarantees:
+      <strong>zero false negatives</strong> (if a campfire is reachable through this peer,
+      the filter always says yes) and <strong>low false positives</strong> (occasionally says
+      yes for a campfire that isn't actually downstream, bounded by filter size).
+    </p>
+    <p>
+      Each node maintains a 256-bit bloom filter per direct peer, encoding which campfire IDs
+      have members reachable through that peer. When forwarding a message for campfire C,
+      the node checks each peer's bloom: only peers whose filter matches C are included
+      in the forwarding set.
+    </p>
+    <p>
+      This approximates a per-campfire shortest-path tree (SPT) without any explicit tree
+      construction, tree maintenance, or additional protocol messages. The bloom filters
+      build naturally as beacons propagate.
+    </p>
+
+    <div class="doc-note">
+      <p><strong>Why not actual spanning trees?</strong> Explicit SPT requires tree construction
+        messages, failure detection, reconvergence. Bloom filters achieve the same forwarding
+        decisions with zero coordination overhead&mdash;they're populated as a side effect of
+        beacon processing that already happens.</p>
+    </div>
+
+    <h3>Filter sizing</h3>
+    <p>
+      With k=3 hash functions on a 256-bit filter, the false positive rate for 20 campfires
+      is ~0.02%. At 1,000 campfires, a 1,024-bit (128 bytes) filter keeps FPR below 1%.
+      The filter is per-peer, so total overhead is <code>peers &times; filter_size</code>&mdash;typically
+      under 1KB per node.
+    </p>
+
+    <hr class="doc-divider">
+
+    <h2 id="spt">The spanning tree insight</h2>
+    <p>
+      The core realization: campfire forwarding is <strong>multicast</strong>, not unicast.
+      A message needs to reach N members in different directions. BGP solves unicast with
+      prefix aggregation. Multicast solves it with spanning trees.
+    </p>
+    <p>
+      For each campfire, the optimal forwarding structure is a Steiner tree: the minimum
+      subgraph connecting the origin to all members. The bloom filter encodes which peers
+      are on this tree for which campfires, without building the tree explicitly.
+    </p>
+
+    <h3>How it works at each node</h3>
+    <ol>
+      <li>A beacon for campfire C arrives from peer P.</li>
+      <li>The node adds C to peer P's bloom filter.</li>
+      <li>When forwarding a message for campfire C, the node checks each peer's bloom filter.</li>
+      <li>Only peers whose bloom contains C are forwarded to.</li>
+      <li>Because beacons propagate via BFS (shortest path first), the first peer to deliver
+        a beacon for C is on the shortest path toward a member&mdash;exactly the SPT edge.</li>
+    </ol>
+
+    <hr class="doc-divider">
+
+    <h2 id="implementation">Implementation</h2>
+    <p>
+      Three changes to the campfire routing stack, all in <code>pkg/transport/http/</code>:
+    </p>
+
+    <h3>1. BloomFilter type</h3>
+    <pre><code><span style="color: var(--ds-text-muted);">// 256 bits, k=3, FNV-1a hash. Zero-alloc bit array.</span>
+type BloomFilter struct {
+    bits [4]uint64
+}
+func (bf *BloomFilter) Add(item string)
+func (bf *BloomFilter) MayContain(item string) bool</code></pre>
+
+    <h3>2. RoutingTable.peerBlooms</h3>
+    <pre><code><span style="color: var(--ds-text-muted);">// Populated on every beacon receipt. No new protocol messages.</span>
+peerBlooms map[string]*BloomFilter  <span style="color: var(--ds-text-muted);">// peer_id -> downstream campfires</span></code></pre>
+
+    <h3>3. forwardMessage() bloom check</h3>
+    <pre><code><span style="color: var(--ds-text-muted);">// Before: forward to all NextHops</span>
+<span style="color: var(--ds-text-muted);">// After: forward to NextHops whose bloom matches</span>
+if h.transport.routingTable.PeerBloomCheck(route.NextHop, campfireID) {
+    forwardingSet[route.NextHop] = true
+}</code></pre>
+
+    <div class="doc-note">
+      <p><strong>Backwards compatible.</strong> If no bloom data exists for a peer (pre-v0.7.0 node),
+        <code>PeerBloomCheck</code> returns true&mdash;conservative fallback to path-vector behavior.
+        The bloom filter is purely additive.</p>
+    </div>
+
+    <hr class="doc-divider">
+
+    <div style="text-align: center; padding: 40px 0 20px;">
+      <h2 style="margin-top: 0; border-bottom: none; padding-bottom: 0;">Run the proof</h2>
+      <p style="color: var(--ds-text-secondary); margin-bottom: 24px;">All tests are in the campfire repo.</p>
+      <pre style="text-align: left; max-width: 560px; margin: 0 auto 24px;"><code><span style="color: var(--ds-accent-secondary);">$</span> cd campfire
+<span style="color: var(--ds-accent-secondary);">$</span> go test -v -run TestAmplificationBGP ./pkg/transport/http/
+<span style="color: var(--ds-accent-secondary);">$</span> go test -v -run TestAmplificationBloom ./pkg/transport/http/
+<span style="color: var(--ds-accent-secondary);">$</span> go test -v -run TestAmplification ./pkg/transport/http/</code></pre>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>

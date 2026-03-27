@@ -1,0 +1,408 @@
+/* Case Studies — Layout and components
+ * Builds on design-system.css + style.css
+ */
+
+/* ── Doc layout (matches campfire site pattern) ── */
+.doc-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 0;
+  min-height: calc(100vh - 64px);
+}
+
+.doc-sidebar {
+  position: sticky;
+  top: 60px;
+  height: calc(100vh - 60px);
+  overflow-y: auto;
+  border-right: 1px solid var(--ds-border);
+  padding: 32px 0;
+  background: var(--ds-surface);
+}
+
+.sidebar-section { margin-bottom: 28px; padding: 0 20px; }
+
+.sidebar-heading {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-accent-primary);
+  margin-bottom: 10px;
+}
+
+.sidebar-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar-links a {
+  display: block;
+  font-size: 14px;
+  color: var(--ds-text-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: color 0.2s, background 0.2s;
+}
+
+.sidebar-links a:hover {
+  color: var(--ds-text);
+  background: var(--ds-surface-hover);
+}
+
+.sidebar-links a.active {
+  color: var(--ds-accent-primary);
+  font-weight: 500;
+  background: rgba(217, 119, 6, 0.08);
+}
+
+/* ── Doc content ── */
+.doc-content {
+  padding: 56px 48px 80px;
+  max-width: none;
+  min-width: 0;
+  flex: 1;
+}
+
+.doc-header { margin-bottom: 40px; }
+
+.doc-label {
+  font-family: var(--ds-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-accent-secondary);
+  margin-bottom: 10px;
+}
+
+.doc-header h1 {
+  font-family: var(--ds-font-body);
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 1.3;
+  margin-bottom: 16px;
+  color: var(--ds-text);
+}
+
+.doc-header p {
+  font-size: 20px;
+  color: var(--ds-text-secondary);
+  line-height: 1.6;
+  max-width: 640px;
+}
+
+.doc-divider {
+  border: none;
+  border-top: 1px solid var(--ds-border);
+  margin: 40px 0;
+}
+
+/* ── Doc typography ── */
+.doc-content h2 {
+  font-weight: 700;
+  font-size: 28px;
+  margin-top: 56px;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ds-border);
+  scroll-margin-top: 80px;
+  color: var(--ds-text);
+}
+
+.doc-content h3 {
+  font-weight: 600;
+  font-size: 20px;
+  margin-top: 36px;
+  margin-bottom: 14px;
+  color: var(--ds-text);
+  scroll-margin-top: 80px;
+}
+
+.doc-content p {
+  margin-bottom: 16px;
+  line-height: 1.75;
+  color: var(--ds-text);
+}
+
+.doc-content ul, .doc-content ol {
+  margin: 12px 0 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.doc-content li { line-height: 1.7; color: var(--ds-text); }
+.doc-content strong { font-weight: 600; color: var(--ds-text); }
+
+.doc-content code {
+  font-family: var(--ds-font-mono);
+  font-size: 0.875em;
+  background: var(--ds-code-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--ds-accent-secondary-light);
+}
+
+.doc-content pre {
+  background: var(--ds-code-bg);
+  border-radius: 8px;
+  padding: 20px 24px;
+  overflow-x: auto;
+  margin: 20px 0;
+}
+
+.doc-content pre code {
+  font-family: var(--ds-font-mono);
+  font-size: 13px;
+  background: none;
+  padding: 0;
+  color: var(--ds-text);
+  line-height: 1.7;
+}
+
+/* ── Note boxes ── */
+.doc-note {
+  border-left: 4px solid var(--ds-accent-secondary);
+  background: rgba(13, 148, 136, 0.08);
+  border-radius: 0 8px 8px 0;
+  padding: 16px 20px;
+  margin: 24px 0;
+}
+
+.doc-note p { margin-bottom: 0; font-size: 15px; }
+.doc-note strong { color: var(--ds-accent-secondary-light); }
+
+/* ── Proof stats (number grid) ── */
+.proof-stats {
+  display: flex;
+  justify-content: center;
+  gap: 64px;
+  margin: 48px 0 32px;
+  flex-wrap: wrap;
+}
+
+.proof-stat { text-align: center; }
+
+.proof-num {
+  font-weight: 700;
+  font-size: 56px;
+  line-height: 1;
+  color: var(--ds-accent-primary);
+  margin-bottom: 8px;
+}
+
+.proof-label {
+  font-size: 14px;
+  color: var(--ds-text-secondary);
+  font-weight: 500;
+}
+
+/* ── Agent grid ── */
+.agent-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+
+.agent-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+
+.agent-card span {
+  color: var(--ds-text-secondary);
+  font-size: 13px;
+}
+
+.agent-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Phase table ── */
+.phase-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 24px 0;
+}
+
+.phase-row {
+  display: grid;
+  grid-template-columns: 40px 140px 1fr 56px;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--ds-surface);
+  border-radius: 6px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.phase-num {
+  font-family: var(--ds-font-mono);
+  font-weight: 600;
+  color: var(--ds-accent-secondary);
+  font-size: 13px;
+}
+
+.phase-name {
+  font-weight: 600;
+  color: var(--ds-text);
+}
+
+.phase-desc {
+  color: var(--ds-text-secondary);
+}
+
+.phase-count {
+  font-family: var(--ds-font-mono);
+  font-weight: 600;
+  color: var(--ds-accent-primary);
+  text-align: right;
+  font-size: 13px;
+}
+
+/* ── Convention grid ── */
+.convention-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.convention-card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+.convention-name {
+  font-weight: 600;
+  color: var(--ds-text);
+  margin-bottom: 6px;
+}
+
+.convention-ops {
+  font-family: var(--ds-font-mono);
+  font-size: 12px;
+  color: var(--ds-accent-secondary);
+}
+
+/* ── Topology spec ── */
+.topology-spec {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+  padding: 20px 24px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: 8px;
+}
+
+.topo-item { display: flex; gap: 8px; align-items: baseline; }
+
+.topo-label {
+  font-family: var(--ds-font-mono);
+  font-size: 12px;
+  color: var(--ds-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.topo-val {
+  font-weight: 600;
+  color: var(--ds-accent-primary);
+}
+
+/* ── Result table ── */
+.result-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 24px 0;
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 120px 100px;
+  gap: 16px;
+  padding: 14px 20px;
+  background: var(--ds-surface);
+  border-radius: 6px;
+  align-items: center;
+  font-size: 15px;
+}
+
+.result-header {
+  background: transparent;
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ds-text-muted);
+  padding-bottom: 8px;
+}
+
+.result-mode { font-weight: 600; color: var(--ds-text); }
+.result-version {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  color: var(--ds-text-muted);
+  margin-left: 6px;
+}
+
+.result-sends {
+  font-family: var(--ds-font-mono);
+  color: var(--ds-text-secondary);
+  text-align: right;
+}
+
+.result-ratio {
+  font-family: var(--ds-font-mono);
+  font-weight: 600;
+  text-align: right;
+}
+
+.result-reduction {
+  font-family: var(--ds-font-mono);
+  text-align: right;
+}
+
+.result-flood .result-ratio { color: var(--ds-error); }
+.result-pv .result-ratio { color: var(--ds-warning); }
+.result-spt .result-ratio { color: var(--ds-success); }
+.result-spt .result-reduction { color: var(--ds-success); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .doc-layout {
+    grid-template-columns: 1fr;
+  }
+  .doc-sidebar { display: none; }
+  .doc-content { padding: 40px 24px 60px; }
+  .doc-header h1 { font-size: 32px; }
+  .proof-stats { gap: 40px; }
+  .proof-num { font-size: 40px; }
+  .phase-row { grid-template-columns: 40px 1fr 56px; }
+  .phase-desc { display: none; }
+  .result-row { grid-template-columns: 1fr 80px 80px; }
+  .result-reduction { display: none; }
+  .topology-spec { gap: 20px; }
+}
