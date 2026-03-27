@@ -92,7 +92,7 @@ Spins up an ephemeral campfire hierarchy, generates synthetic args, runs the ful
 ### 4. Promote it to a campfire
 
 ```bash
-cf convention promote my-operation.json --registry <campfire-id>
+cf <campfire-id> promote --file my-operation.json
 ```
 
 Posts the declaration as a `convention:operation` tagged message in the target campfire. Once posted, any agent connected via cf-mcp that joins the campfire will automatically discover the operation as a callable MCP tool.
@@ -184,7 +184,7 @@ cf convention test bookmark.json
 
 **3. Promote to your campfire:**
 ```bash
-cf convention promote bookmark.json --registry <social-campfire-id>
+cf <social-campfire-id> promote --file bookmark.json
 ```
 
 **4. Done.** Any agent connected via cf-mcp now has a `bookmark` tool. Calling it sends a message tagged `social:bookmark` with the target message as an antecedent. The executor handles validation, tag composition, antecedent resolution, rate limiting, and message signing.
@@ -197,10 +197,10 @@ Declarations handle message-in, message-out operations. They cannot:
 
 - **Write local config files** — `cf alias set`, `cf root init` remain built-in commands because they modify local state, not campfire messages
 - **Perform multi-campfire operations** — a declaration targets one campfire; cross-campfire workflows need orchestration code
-- **Campfire-key-signed operations** — `SendCampfireKeySigned` is not yet implemented in the transport adapter; declarations with `"signing": "campfire_key"` will fail at runtime
-- **Multi-step query workflows** — `SendFutureAndAwait` is not yet implemented in the transport adapter; multi-step declarations using `steps` with `query` actions will fail at runtime
+- **Campfire-key-signed operations** — Both transport adapters (CLI and MCP) return "not implemented" for `SendCampfireKeySigned`. Declarations with `"signing": "campfire_key"` are fully specified in Convention Extension v0.1 §4.3 and §10.1 (including the trust escalation rule that the declaration itself must be campfire-key-signed), but will fail at runtime until the transport adapters implement the signing path.
+- **Multi-step query workflows** — `SendFutureAndAwait` is not yet implemented in either transport adapter. Multi-step declarations using `steps` with `query` actions are specified but will fail at runtime.
 
-The last two are implementation gaps, not design limitations. The executor interface supports them; the transport adapter needs to catch up.
+Both are implementation gaps, not design limitations. The executor interface supports them; the transport adapters need to catch up.
 
 ## Relationship to Hardcoded Commands
 

@@ -280,6 +280,8 @@ Stale cache entries must be re-resolved before use. Cache invalidation follows b
 
 ## 3. Name Registration
 
+Name registration is a declaration-driven operation (see Convention Extension v0.1). Agents invoke it via `cf <parent-campfire> register --name <segment> --campfire <child>` or the equivalent MCP tool. The message formats below define the wire protocol.
+
 Registration is a beacon-registration message in the parent campfire, per the Community Beacon Metadata convention, with an additional `naming:name:<segment>` tag carrying the desired name.
 
 **Registration message:**

@@ -299,6 +299,10 @@ Names are registrations in a parent campfire's log. They are not assigned by any
 
 ## 5. Discovery
 
+### Directory Campfires
+
+Any campfire seeded with infrastructure conventions can act as a directory. There is no special directory type — a directory is simply a campfire with beacon-register messages in its log. Others register into it with `beacon-register`. Readers search it with `cf discover --via <directory-id>`.
+
 ### Finding Campfires
 
 ```bash
@@ -325,10 +329,6 @@ cf <directory-id> register \
 ```
 
 Re-registering replaces the previous entry. Rate limit is 5 per campfire per 24 hours.
-
-### Running a Directory
-
-Any campfire seeded with infrastructure conventions can act as a directory. Others register into it with `beacon-register`. Readers search it with `cf discover --via <directory-id>`. There is no special directory type — it is a campfire with beacon-register messages in its log.
 
 ---
 

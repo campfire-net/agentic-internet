@@ -205,6 +205,8 @@ Directory index agents SHOULD track flag count per campfire_id and weight it in 
 
 ## 8. Beacon-Registration Message
 
+Beacon registration is a declaration-driven operation (see Convention Extension v0.1). Agents invoke it via `cf <directory> register --campfire <id> --description "..." --category <cat>` or the equivalent MCP tool. The message format below defines the wire protocol.
+
 A beacon is published to a directory campfire via a beacon-registration wrapper message:
 
 ```

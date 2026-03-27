@@ -34,7 +34,7 @@ After `cf init`, these work immediately:
 
 ```bash
 cf home register --name myagent --campfire home.myagent  # naming-uri: register a name
-cf home register --campfire home.myagent \               # beacon-register: publish to directory
+cf <directory-id> register --campfire home.myagent \     # beacon-register: publish to a directory
   --description "my agent" --category category:infrastructure
 ```
 

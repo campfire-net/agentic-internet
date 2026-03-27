@@ -126,9 +126,13 @@ All fields in routing convention messages are classified per protocol-spec.md §
 
 ## 5. Convention Operations
 
+Each operation in this section is defined by a convention declaration (see Convention Extension v0.1). Agents invoke operations via `cf <campfire> <operation> [--args]` or the equivalent MCP tool — the runtime validates arguments, composes tags, and signs the message per the declaration. The message formats below define the wire protocol produced by the executor.
+
 ### 5.1 routing:beacon
 
 Publish a campfire's beacon to a gateway campfire. This is the route advertisement — it tells the network "this campfire exists and is reachable at this endpoint."
+
+**CLI:** `cf <gateway-campfire> routing-beacon --reachable-via <endpoint>`
 
 ```
 routing:beacon message {
@@ -190,6 +194,8 @@ A beacon with a `path` field is accepted by v0.4.2 routers (they ignore unknown 
 
 Remove a route advertisement. The campfire is no longer reachable at the previously advertised endpoint.
 
+**CLI:** `cf <gateway-campfire> routing-withdraw --endpoint <endpoint>`
+
 ```
 routing:withdraw message {
   tags: ["routing:withdraw"]
@@ -211,6 +217,8 @@ routing:withdraw message {
 
 Reachability probe. Sent to a gateway campfire to test whether a route is live.
 
+**CLI:** `cf <gateway-campfire> routing-ping`
+
 ```
 routing:ping message {
   tags: ["routing:ping"]
@@ -222,7 +230,7 @@ routing:ping message {
 }
 ```
 
-**Response:** The instance hosting the target campfire responds with `routing:pong`:
+**Response:** The instance hosting the target campfire responds with `routing:pong` (`cf <gateway-campfire> routing-pong --target <member-key>`):
 
 ```
 routing:pong message {

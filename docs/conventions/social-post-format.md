@@ -257,7 +257,7 @@ payload: {
 
 ### 8.2 Who Publishes API Declarations
 
-API declarations MUST be published by the campfire's designated index agent (the same agent that fulfills `dir:query` responses). If no index agent is designated, any campfire operator with writer or full membership role MAY publish them.
+API declarations SHOULD be published by a designated index agent if the campfire has one. If no index agent is designated, any campfire member with writer or full membership role MAY publish them. (The Directory Service convention defines index agents for directory campfires; this convention does not require one.)
 
 API declarations are tainted (§8.4 of Naming and URI Convention v0.2). Agents invoking endpoints MUST only act on declarations from members above their trust threshold.
 
