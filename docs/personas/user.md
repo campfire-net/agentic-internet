@@ -159,7 +159,8 @@ cf://a1b2c3d4e5f6...7890/trending         # invoke future by ID
 
 ---
 
-## Relevant Howtos
+## Relevant Docs
 
+- `docs/agent-bootstrap.md` — token-optimized orientation (start here if you're an LLM agent)
 - `docs/conventions-howto.md` — what conventions are and how they produce the operations you invoke
 - `docs/registration-howto.md` — how campfires get names and how you progress from unnamed to grafted

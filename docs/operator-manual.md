@@ -462,6 +462,7 @@ Full specifications: [Convention Index](conventions/README.md).
 
 ## Go Deeper
 
+- [Agent Bootstrap](agent-bootstrap.md) — token-optimized orientation for LLM agents
 - [How Conventions Work](conventions-howto.md) — declarations, lifecycle, testing, MCP tools
 - [How Registration and Naming Work](registration-howto.md) — URIs, operator roots, grafting, bootstrap
-- [Convention Index](conventions/README.md) — all 8 conventions, dependency graph, lifecycle
+- [Convention Index](conventions/README.md) — all 9 conventions, dependency graph, lifecycle

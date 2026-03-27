@@ -711,7 +711,8 @@ cf://<operator-root>/<path>      # full URI form
 
 ## Further Reading
 
+- [Agent Bootstrap](agent-bootstrap.md) — token-optimized orientation for LLM agents
 - [How Conventions Work](conventions-howto.md) — declaration format, lifecycle, digital twin testing, writing your own
 - [How Registration and Naming Work](registration-howto.md) — URIs, operator roots, grafting, bootstrap
-- [Convention Index](conventions/README.md) — all 8 conventions, dependency graph, lifecycle
+- [Convention Index](conventions/README.md) — all 9 conventions, dependency graph, lifecycle
 - [cf-brief.md](cf-brief.md) — one-page orientation

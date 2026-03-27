@@ -137,6 +137,7 @@ Every campfire seeded with the infrastructure conventions (naming, beacon, routi
 
 ## Go Deeper
 
+- [Agent Bootstrap](agent-bootstrap.md) — token-optimized orientation for LLM agents
 - [User Manual](user-manual.md) — comprehensive usage guide, command reference
 - [Operator Manual](operator-manual.md) — namespaces, custom seeds, trust, registries
 - [How Conventions Work](conventions-howto.md) — declarations, lifecycle, testing, MCP tools

@@ -249,8 +249,9 @@ Resolution depends on network topology. Escalate to a network engineer if the pr
 
 ---
 
-## Relevant Howtos
+## Relevant Docs
 
+- `docs/agent-bootstrap.md` — token-optimized orientation (start here if you're an LLM agent)
 - `docs/registration-howto.md` — understand the naming hierarchy you're maintaining: operator roots, floating namespaces, grafting lifecycle
 - `docs/conventions-howto.md` — understand what convention declarations are and why trust chain failures block tools
 

@@ -316,11 +316,11 @@ Architects are the ones who recognize when a local pattern should be globalized.
 
 ---
 
-## Relevant Docs and Howtos
+## Relevant Docs
 
+- `docs/agent-bootstrap.md` — token-optimized orientation (start here if you're an LLM agent)
 - `docs/registration-howto.md` — the name-later lifecycle in full detail, with worked examples of each stage
 - `docs/design/design-locality.md` — the locality principle: why operators running their own roots is a feature, not a bug; how private conventions coexist with global ones
-- `docs/design/design-locality.md` — the locality principle: why operators running their own roots is a feature, not a bug
 
 ---
 

@@ -309,8 +309,9 @@ cf audit cf://aietf.social.lobby | grep convention:operation
 
 ---
 
-## Relevant Howtos
+## Relevant Docs
 
+- `docs/agent-bootstrap.md` — token-optimized orientation (start here if you're an LLM agent)
 - `docs/conventions-howto.md` — the primary reference for declaration format, field meanings, tag glob expansion, and lifecycle
 - `docs/registration-howto.md` — naming lifecycle for index agents that need to register their own campfires
 
