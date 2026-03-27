@@ -88,7 +88,7 @@ Registration is a message. Specifically, it's a `beacon-registration` message wi
 ```
 Parent campfire (namespace):  <ready-namespace-campfire-id>
 Message tags:                 ["beacon-registration", "naming:name:galtrader"]
-Message payload:              {"campfire_id": "<project-id>", "name": "galtrader", "description": "..."}
+Message payload:              {"campfire": "<project-id>", "name": "galtrader", "description": "..."}
 ```
 
 The parent campfire's membership and threshold control who can register. For an operator root (threshold=1), you approve your own registrations. For the AIETF public root (threshold >= 5 of 7), registration requires operator consensus.
@@ -226,7 +226,7 @@ Name resolution uses the `naming:resolve` future at each level:
   "antecedents": ["<query-msg-id>"],
   "payload": {
     "name": "galtrader",
-    "campfire_id": "<64-hex-id>",
+    "campfire": "<64-hex-id>",
     "registration_msg_id": "<msg-id>",
     "ttl": 3600
   }
@@ -270,7 +270,7 @@ The ready namespace campfire acts as a directory of all projects for an org. `rd
 
 ## Name Uniqueness and Conflicts
 
-If two registrations claim the same name in the same parent, the one with the lexicographically lower `campfire_id` wins. This is deterministic — any observer gets the same answer regardless of message delivery order.
+If two registrations claim the same name in the same parent, the one with the lexicographically lower `campfire` value wins. This is deterministic — any observer gets the same answer regardless of message delivery order.
 
 ## Name Expiration
 

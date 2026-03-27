@@ -56,7 +56,7 @@ A declaration is a JSON file that describes one operation:
 | `args` | Typed arguments with validation (string, integer, enum, duration, key, boolean, campfire, message_id, json, tag_set) |
 | `antecedents` | Message threading — `none`, `exactly_one(target)`, `exactly_one(self_prior)` |
 | `signing` | Who signs — `member_key` (sender) or `campfire_key` (campfire authority) |
-| `rate_limit` | Throttling — max N per window, scoped to sender/campfire_id/both |
+| `rate_limit` | Throttling — max N per window, scoped to sender/campfire/both |
 
 ### Tag Glob Expansion
 

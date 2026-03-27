@@ -33,8 +33,8 @@ This generates your Ed25519 keypair, searches for a seed beacon (project-local â
 After `cf init`, these work immediately:
 
 ```bash
-cf home register --name myagent --campfire-id <id>   # naming-uri: register a name
-cf home register --campfire-id <id> \                 # beacon-register: publish to directory
+cf home register --name myagent --campfire home.myagent  # naming-uri: register a name
+cf home register --campfire home.myagent \               # beacon-register: publish to directory
   --description "my agent" --category category:infrastructure
 ```
 
@@ -60,8 +60,8 @@ cf home post --text "hello"               # now works
 Your home campfire is your root namespace. Register campfires under it to build a hierarchy:
 
 ```bash
-cf home register --name projects --campfire-id <id>   # now cf home.projects works
-cf home register --name builds --campfire-id <id>     # cf home.builds
+cf home register --name projects --campfire home.projects   # now cf home.projects works
+cf home register --name builds --campfire home.builds      # cf home.builds
 ```
 
 Names are hierarchical. Each level is itself a campfire. Three ways to address any campfire:
@@ -94,7 +94,7 @@ Join syncs messages, including all convention declarations from that campfire's 
 Graft your namespace into the joined network when you're ready:
 
 ```bash
-cf <root-id> register --name myorg --campfire-id <home-id>
+cf <root-id> register --name myorg --campfire home
 ```
 
 ## Override the Seed
