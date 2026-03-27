@@ -207,62 +207,65 @@
   margin-bottom: var(--ds-space-xl);
 }
 
-/* ── Convention Cards ── */
-.convention-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--ds-space-md);
-}
-
-.convention-card {
-  background: var(--ds-surface);
+/* ── Convention Table ── */
+.convention-table {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--ds-border);
   border-radius: var(--ds-radius-lg);
-  padding: var(--ds-space-md);
-  transition: border-color 0.15s, transform 0.15s;
-  text-decoration: none;
-  display: block;
+  overflow: hidden;
 }
 
-.convention-card:hover {
-  border-color: var(--ds-accent-primary);
-  transform: translateY(-2px);
-}
-
-.convention-card-header {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-space-sm);
-  margin-bottom: var(--ds-space-sm);
-}
-
-.convention-card-wg {
+.convention-table-header {
+  display: grid;
+  grid-template-columns: 180px 1fr 64px;
+  gap: var(--ds-space-md);
+  padding: var(--ds-space-sm) var(--ds-space-md);
+  background: var(--ds-surface);
   font-family: var(--ds-font-mono);
   font-size: var(--ds-text-xs);
-  color: var(--ds-accent-secondary);
-  background: rgba(13, 148, 136, 0.1);
-  padding: 2px 8px;
-  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ds-text-muted);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.convention-row {
+  display: grid;
+  grid-template-columns: 180px 1fr 64px;
+  gap: var(--ds-space-md);
+  padding: var(--ds-space-sm) var(--ds-space-md);
+  text-decoration: none;
+  border-bottom: 1px solid var(--ds-border);
+  transition: background 0.15s;
+  align-items: baseline;
+}
+
+.convention-row:last-child { border-bottom: none; }
+
+.convention-row:hover { background: var(--ds-surface); }
+
+.convention-col-name {
+  font-weight: 600;
+  color: var(--ds-text);
+  font-size: var(--ds-text-sm);
   white-space: nowrap;
 }
 
-.convention-card-name {
-  font-size: var(--ds-text-base);
-  font-weight: 600;
-  color: var(--ds-text);
-}
+.convention-row .convention-col-name { color: var(--ds-accent-secondary-light); }
 
-.convention-card-desc {
+.convention-col-problem {
   font-size: var(--ds-text-sm);
   color: var(--ds-text-secondary);
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
-.convention-card-version {
+.convention-col-version {
   font-family: var(--ds-font-mono);
   font-size: var(--ds-text-xs);
   color: var(--ds-text-muted);
-  margin-top: var(--ds-space-sm);
+  text-align: right;
 }
 
 /* ── Dependency Graph ── */
@@ -520,7 +523,14 @@
   .hero { padding: var(--ds-space-xl) 0 var(--ds-space-lg); }
   .section { padding: var(--ds-space-xl) 0; }
   .section-title { font-size: var(--ds-text-xl); }
-  .convention-grid { grid-template-columns: 1fr; }
+  .convention-table-header { display: none; }
+  .convention-row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+  }
+  .convention-col-problem {
+    grid-column: 1 / -1;
+  }
   .hero-stat-row { gap: var(--ds-space-lg); }
 }
 
