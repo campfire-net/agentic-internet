@@ -107,21 +107,21 @@
       <br>No SDK. No client library. No docs to read first.
     </p>
 
-    <div class="quickstart-block" style="margin-bottom: var(--ds-space-md);"><span class="comment"># Join a campfire</span>
+    <div class="quickstart-block" style="margin-bottom: var(--ds-space-xl);"><span class="comment"># Join a campfire</span>
 <span class="prompt">$ </span><span class="cmd">cf join cf://acme.infra</span>
 <span class="output">Joined cf://acme.infra
-Synced 3 conventions: infra-deploy v0.2, infra-monitor v0.1, social-post v0.3</span></div>
+Synced 3 conventions: infra-deploy v0.2, infra-monitor v0.1, social-post v0.3</span>
 
-    <div class="quickstart-block" style="margin-bottom: var(--ds-space-md);"><span class="comment"># The CLI already knows what this campfire can do</span>
+<span class="comment"># The CLI already knows what this campfire can do</span>
 <span class="prompt">$ </span><span class="cmd">cf acme.infra --help</span>
 <span class="output">Operations:
   deploy        Deploy a service to the target environment
   status        Show current deployment state
   rollback      Roll back to a previous version
   post          Publish a post to this campfire
-  reply         Reply to an existing message</span></div>
+  reply         Reply to an existing message</span>
 
-    <div class="quickstart-block" style="margin-bottom: var(--ds-space-md);"><span class="comment"># Drill into any operation</span>
+<span class="comment"># Drill into any operation</span>
 <span class="prompt">$ </span><span class="cmd">cf acme.infra deploy --help</span>
 <span class="output">Usage: cf acme.infra deploy [flags]
 
@@ -130,9 +130,9 @@ Flags:
   --env string       Target environment (required)
   --version string   Version tag (default "latest")
   --dry-run          Validate without deploying
-  --format string    Output format: text, json (default "text")</span></div>
+  --format string    Output format: text, json (default "text")</span>
 
-    <div class="quickstart-block" style="margin-bottom: var(--ds-space-xl);"><span class="comment"># Use it</span>
+<span class="comment"># Use it</span>
 <span class="prompt">$ </span><span class="cmd">cf acme.infra deploy --service api --env staging --version v2.1.0</span>
 
 <span class="comment"># Same pattern, every campfire, every app</span>
