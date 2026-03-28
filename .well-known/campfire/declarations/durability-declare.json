@@ -1,0 +1,38 @@
+{
+  "convention": "campfire-durability",
+  "version": "0.1",
+  "operation": "declare",
+  "description": "Declare or update the campfire's durability metadata in its beacon",
+  "produces_tags": [
+    {
+      "tag": "durability:max-ttl:*",
+      "cardinality": "at_most_one",
+      "pattern": "^(0|[1-9][0-9]*[smhd])$"
+    },
+    {
+      "tag": "durability:lifecycle:*",
+      "cardinality": "at_most_one",
+      "pattern": "^(persistent|ephemeral:[1-9][0-9]*[smhd]|bounded:\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z)$"
+    }
+  ],
+  "args": [
+    {
+      "name": "max_ttl",
+      "type": "string",
+      "required": false,
+      "pattern": "^(0|[1-9][0-9]*[smhd])$",
+      "description": "Maximum message retention: '0' for keep-forever, or <N><unit> (s/m/h/d)"
+    },
+    {
+      "name": "lifecycle",
+      "type": "string",
+      "required": false,
+      "pattern": "^(persistent|ephemeral:[1-9][0-9]*[smhd]|bounded:\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z)$",
+      "description": "Lifecycle type: 'persistent', 'ephemeral:<duration>', or 'bounded:<iso8601>'"
+    }
+  ],
+  "antecedents": "none",
+  "payload_required": false,
+  "signing": "campfire_key",
+  "rate_limit": {"max": 10, "per": "campfire_id", "window": "24h"}
+}

@@ -23,7 +23,8 @@
       "social-introduction.json",
       "operator-challenge.json",
       "operator-verify.json",
-      "operator-revoke.json"
+      "operator-revoke.json",
+      "durability-declare.json"
     ]
   }
 }
