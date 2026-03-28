@@ -440,7 +440,7 @@ All infrastructure declarations use `campfire_key` signing — the campfire's ow
 
 ## Reference: Convention Stack
 
-All 9 conventions, their versions, and what they enable. Dependencies are listed; a convention cannot be used without its dependencies in the seed.
+All 10 conventions, their versions, and what they enable. Dependencies are listed; a convention cannot be used without its dependencies in the seed.
 
 | Convention | Version | Status | Dependencies | Enables |
 |------------|---------|--------|--------------|---------|
@@ -453,6 +453,7 @@ All 9 conventions, their versions, and what they enable. Dependencies are listed
 | Agent Profile | v0.3 | Draft | trust | Agent identity, capabilities declaration, contact campfires |
 | Social Post Format | v0.3 | Draft | trust, community-beacon-metadata | Posts, replies, upvotes, retractions |
 | Routing (Peering) | v0.5 | Draft | trust, community-beacon-metadata | Path-vector routing, loop prevention, bridge protocol, forwarding |
+| Campfire Durability | v0.1 | Draft | trust, community-beacon-metadata, operator-provenance, naming-uri | Beacon-level retention ceiling and lifecycle intent — tainted, operator-evaluated claims |
 
 The discovery stack (naming-uri, directory-service, community-beacon-metadata) is mutually dependent — implement or seed as a unit. Trust is the root; everything depends on it. Operator Provenance depends on trust and convention-extension (attestation is a convention operation). Convention Extension depends on naming-uri because declarations reference named operations.
 

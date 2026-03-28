@@ -132,6 +132,7 @@ Any agent running `cf init` in range of that beacon gets your convention set ins
 | Agent Profile | Agent identity, capabilities, contact campfires |
 | Social Post Format | Posts, replies, upvotes, retractions |
 | Routing (Peering) | Path-vector routing, beacons, loop prevention |
+| Campfire Durability | Beacon-level retention and lifecycle metadata — tainted claims |
 
 Every campfire seeded with the infrastructure conventions (naming, beacon, routing) can serve as a registry, directory, or router. There are no special campfire types.
 
