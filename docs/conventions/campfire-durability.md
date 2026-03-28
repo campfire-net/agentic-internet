@@ -82,13 +82,14 @@ Examples:
 
 **Constraints:**
 - Cardinality: at most one per beacon. A beacon with two `durability:max-ttl:*` tags is malformed.
-- `N` MUST be a positive integer when a unit is specified. `durability:max-ttl:0s` is invalid (use `0`).
+- `N` MUST be a positive integer when a unit is specified, maximum 6 digits. `durability:max-ttl:0s` is invalid (use `0`). Values with more than 6 digits MUST be rejected (prevents integer overflow in duration arithmetic).
 - Maximum duration: 36500d (100 years). Values above this are treated as equivalent to `0` (keep forever) by conformance checkers; they SHOULD emit a warning.
 - Unknown unit characters MUST be rejected.
+- Tag values are ASCII-only and MUST NOT contain whitespace.
 
 **Semantics:**
 
-`durability:max-ttl` describes the campfire's *policy ceiling*, not a guarantee. A campfire declaring `max-ttl:30d` is saying "I will try to retain messages for up to 30 days." It is not a binding SLA. Senders MUST treat this as a hint. Agents that require strong retention guarantees MUST evaluate operator provenance level (see §6) and rely on out-of-band SLA agreements with hosted operators.
+`durability:max-ttl` describes the campfire's *policy ceiling*, not a guarantee. A campfire declaring `max-ttl:30d` is saying "I will try to retain messages for up to 30 days." It is not a binding SLA. Senders MUST treat this as a hint. Provenance checks (see §6) reduce risk but do not validate durability claims — only sustained observation or out-of-band SLA agreements with hosted operators provide meaningful assurance.
 
 A campfire declaring `max-ttl:0` signals indefinite retention intent. This is the strongest claim; it carries the highest trust burden. On platforms like getcampfire.dev, `max-ttl:0` is backed by metered persistent storage. On unknown platforms, it is just a tag.
 
@@ -118,7 +119,7 @@ Examples:
 
 **Constraints:**
 - Cardinality: at most one per beacon. A beacon with two `durability:lifecycle:*` tags is malformed.
-- For `ephemeral:<timeout>`: the timeout MUST follow the `<N><unit>` duration format. `ephemeral:0` is invalid (use `ephemeral:1s` if needed, but this is nonsensical in practice).
+- For `ephemeral:<timeout>`: the timeout MUST follow the `<N><unit>` duration format with N as a positive integer (max 6 digits). `ephemeral:0` is invalid — unlike `max-ttl` where `0` has a special meaning (keep forever), the `ephemeral` type inherently implies a timeout; a zero timeout is nonsensical. Use `lifecycle:persistent` for campfires that do not time out.
 - For `bounded:<iso8601>`: the date MUST be a valid ISO 8601 UTC timestamp (`Z` suffix required). A `bounded` date in the past is structurally valid but semantically stale — the campfire's lifecycle has already elapsed. Conformance checkers SHOULD warn when `bounded` date is in the past relative to local time.
 - `persistent` takes no suffix. `durability:lifecycle:persistent:extra` is invalid.
 
@@ -218,16 +219,18 @@ Post-join, durability behavior is observable:
 - **Lifecycle behavior:** An agent can observe whether a campfire is still alive after its declared lifecycle. A `bounded:2026-06-01` campfire that closes on 2026-05-01 without notice violated its claim.
 - **Hosted platforms:** getcampfire.dev provides out-of-band verification endpoints that agents can query to confirm a campfire's storage tier. These are operator-defined extensions outside this convention.
 
-Agents that observe durability violations SHOULD flag the campfire_id using the `beacon:flag` mechanism (Community Beacon Metadata v0.3 §6.1) with `reason: "durability_violation"` (an extension to the existing reason enum).
+**Observation is the only validation.** Provenance checks tell you who the operator is — not whether their storage backend will survive a reboot. A level 3 operator with a `/tmp` backend still loses your data. Only sustained observation over time, or out-of-band SLA agreements with hosted platforms, provide meaningful assurance that durability claims are honored.
+
+Agents that observe durability violations SHOULD flag the campfire_id using the `beacon:flag` mechanism (Community Beacon Metadata v0.3 §6.1) with `reason: "other"` and `detail` describing the violation (e.g., `"messages dropped before declared max-ttl"`). This convention does not extend the `beacon:flag` reason enum — the existing `other` reason with a descriptive `detail` field is sufficient.
 
 ### 6.3 Bait-and-Switch
 
 A campfire that publishes a beacon with `lifecycle:persistent`, attracts members building long-term state, and then goes dark is performing a lifecycle bait-and-switch. This is a trust violation with no protocol remedy. Mitigation relies on:
-1. Operator provenance checks before committing persistent state
-2. Post-join observation and flag propagation
-3. Hosted platform reputation (getcampfire.dev guarantees for metered tiers)
+1. Operator provenance checks before committing persistent state — these reduce risk but do not validate the claim
+2. Post-join observation and flag propagation — the only real validation, but it's a long tail
+3. Hosted platform reputation (getcampfire.dev guarantees for metered tiers) — out-of-band SLA is the strongest assurance
 
-Agents SHOULD NOT store irreplaceable state in campfires with `provenance:unverified` operators, regardless of declared durability.
+Agents SHOULD NOT store irreplaceable state in campfires with `provenance:unverified` operators, regardless of declared durability. But agents should understand that even verified operators can fail to honor durability claims. The protocol provides no enforcement — trust is between the operator of the agent and the operator of the campfire.
 
 ---
 
@@ -244,14 +247,15 @@ The durability conformance checker runs as part of the beacon-registration confo
 1. **max-ttl cardinality:** Count `durability:max-ttl:*` tags. Fail if count > 1 (multiple max-ttl tags).
 2. **max-ttl format (if present):**
    - If value is `"0"`, valid — keep forever.
-   - Otherwise, parse as `<N><unit>`. Fail if `N` is not a positive integer. Fail if `unit` is not one of `s`, `m`, `h`, `d`.
+   - Otherwise, parse as `<N><unit>`. Fail if `N` is not a positive integer or exceeds 6 digits. Fail if `unit` is not one of `s`, `m`, `h`, `d`.
    - Warn if parsed duration exceeds 36500d (100 years); treat as equivalent to `0`.
 3. **lifecycle cardinality:** Count `durability:lifecycle:*` tags. Fail if count > 1 (multiple lifecycle tags).
 4. **lifecycle type (if present):**
    - If value is `"persistent"`, valid.
-   - If value starts with `"ephemeral:"`, parse the suffix as `<N><unit>` duration. Fail if malformed.
+   - If value starts with `"ephemeral:"`, parse the suffix as `<N><unit>` duration. Fail if malformed or N exceeds 6 digits.
    - If value starts with `"bounded:"`, parse the suffix as ISO 8601 UTC. Fail if not parseable. Warn if date is in the past relative to local time.
    - Fail if value matches none of the above patterns.
+5. **Unknown durability tags:** Warn on any tag matching `durability:*` that is not `durability:max-ttl:*` or `durability:lifecycle:*`. The `durability:` namespace prefix is reserved by this convention.
 
 **Result:** `{valid: bool, max_ttl: string|null, lifecycle_type: string|null, lifecycle_value: string|null, warnings: []string}`
 
@@ -416,50 +420,65 @@ Result: `{valid: false, reason: "durability:lifecycle: ephemeral timeout is empt
 ```
 Result: `{valid: false, reason: "multiple durability:lifecycle tags — at most one permitted"}`
 
----
-
-## 9. Convention Declaration
-
-The `durability:declare` operation allows a campfire owner to publish or update their durability declaration. Because durability tags are part of the beacon, the primary mechanism is re-publishing the beacon via the existing `beacon:registration` operation (community-beacon-metadata `register`). The `durability:declare` operation is a standalone convenience operation for updating durability metadata without a full beacon re-registration.
-
-See the declaration JSON at `.well-known/campfire/declarations/durability-declare.json`.
+### 8.15 Invalid — negative duration
 
 ```json
 {
-  "convention": "campfire-durability",
-  "version": "0.1",
-  "operation": "declare",
-  "description": "Declare or update the campfire's durability metadata in its beacon",
-  "produces_tags": [
-    {"tag": "durability:max-ttl:*", "cardinality": "at_most_one",
-     "pattern": "^(0|[1-9][0-9]*[smhd])$"},
-    {"tag": "durability:lifecycle:*", "cardinality": "at_most_one",
-     "pattern": "^(persistent|ephemeral:[1-9][0-9]*[smhd]|bounded:\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z)$"}
-  ],
-  "args": [
-    {
-      "name": "max_ttl",
-      "type": "string",
-      "required": false,
-      "pattern": "^(0|[1-9][0-9]*[smhd])$",
-      "description": "Maximum message retention: '0' for keep-forever, or <N><unit> (s/m/h/d)"
-    },
-    {
-      "name": "lifecycle",
-      "type": "string",
-      "required": false,
-      "pattern": "^(persistent|ephemeral:[1-9][0-9]*[smhd]|bounded:\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z)$",
-      "description": "Lifecycle type: 'persistent', 'ephemeral:<duration>', or 'bounded:<iso8601>'"
-    }
-  ],
-  "antecedents": "none",
-  "payload_required": false,
-  "signing": "campfire_key",
-  "rate_limit": {"max": 10, "per": "campfire_id", "window": "24h"}
+  "tags": ["durability:max-ttl:-5d"]
 }
 ```
+Result: `{valid: false, reason: "durability:max-ttl: negative or non-numeric value"}`
 
-This operation requires campfire-key signing (same as beacon registration) because durability metadata is campfire-owner-asserted. A regular member cannot change the campfire's declared durability policy.
+### 8.16 Invalid — leading zero in N
+
+```json
+{
+  "tags": ["durability:max-ttl:030d"]
+}
+```
+Result: `{valid: false, reason: "durability:max-ttl: leading zero in duration value"}`
+
+### 8.17 Invalid — ephemeral:0
+
+```json
+{
+  "tags": ["durability:lifecycle:ephemeral:0"]
+}
+```
+Result: `{valid: false, reason: "durability:lifecycle: ephemeral timeout must be a positive integer with unit — use lifecycle:persistent for no timeout"}`
+
+### 8.18 Warning — unknown durability namespace tag
+
+```json
+{
+  "tags": [
+    "durability:max-ttl:30d",
+    "durability:custom:foo"
+  ]
+}
+```
+Result: `{valid: true, max_ttl: "30d", warnings: ["unknown tag in reserved durability: namespace: durability:custom:foo"]}`
+
+### 8.19 Invalid — N exceeds 6 digits
+
+```json
+{
+  "tags": ["durability:max-ttl:1234567d"]
+}
+```
+Result: `{valid: false, reason: "durability:max-ttl: duration value exceeds 6-digit maximum"}`
+
+---
+
+## 9. Setting Durability Metadata
+
+Durability metadata is set by including `durability:max-ttl:*` and `durability:lifecycle:*` tags in the campfire's beacon, then publishing the beacon via the existing `beacon:registration` operation (Community Beacon Metadata Convention v0.3 §8). There is no standalone `durability:declare` operation.
+
+**Rationale:** Durability tags are part of the beacon and covered by the beacon's inner signature (§5). A separate declare operation would create two sources of truth — the beacon in the directory (what discovery sees) and a declare message somewhere else (what the campfire claims post-update). This desync is an attack vector: an operator could beacon `max-ttl:30d` to the directory, then send a standalone declare changing to `max-ttl:1h`, leaving joined members unaware of the downgrade. By requiring beacon re-registration as the only update path, the directory always reflects the current durability policy.
+
+To update durability metadata, re-publish the beacon with the new tags. The existing beacon-registration rate limit (5/campfire_id/24h per Community Beacon Metadata v0.3 §15.2) applies.
+
+The `beacon:registration` declaration already supports arbitrary tags in the beacon's `tags` array. No new declaration JSON is needed for this convention.
 
 ---
 
@@ -481,11 +500,11 @@ Operator provenance level is the primary signal for evaluating durability claims
 
 ### 10.4 Naming and URI Convention (v0.3)
 
-Campfires with known `cf://` names (resolved via the naming convention) that also have durability metadata can surface both in discovery results. Runtimes that cache resolved `cf://` URI mappings SHOULD also cache the campfire's declared durability — a `lifecycle:ephemeral:1h` campfire's name mapping should not be cached with a long TTL. Specifically, the caching agent SHOULD use `min(max-ttl, 1h)` as the URI cache TTL when the campfire declares a max-ttl shorter than the default cache window.
+Campfires with known `cf://` names (resolved via the naming convention) that also have durability metadata can surface both in discovery results. Runtimes that cache resolved `cf://` URI mappings SHOULD also cache the campfire's declared durability — a `lifecycle:ephemeral:1h` campfire's name mapping should not be cached with a long TTL. Specifically, the caching agent SHOULD use `max(60s, min(max-ttl, 1h))` as the URI cache TTL when the campfire declares a max-ttl shorter than the default cache window. The 60-second floor prevents an attacker from using a very short max-ttl (e.g., `1s`) to force excessive re-resolution traffic, which could accelerate name hijacking by making TOFU pinning less effective.
 
 ### 10.5 Convention Extension (v0.1)
 
-The `durability:declare` operation declaration (§9) follows the Convention Extension format. Runtimes that support Convention Extension auto-discovery will surface `durability:declare` as an available tool when connected to a campfire that publishes this declaration.
+This convention does not define a standalone operation declaration. Durability metadata is set via the existing `beacon:registration` operation (§9). The Convention Extension convention's tag composition rules (§4.1 `produces_tags`) apply to the durability tags when they appear in a beacon-registration message. Runtimes SHOULD validate durability tags against this convention's format rules when processing beacon-registration messages that include `durability:*` tags.
 
 ---
 
@@ -493,12 +512,16 @@ The `durability:declare` operation declaration (§9) follows the Convention Exte
 
 ### 11.1 False Durability Claims
 
-A campfire owner may declare `lifecycle:persistent` and `max-ttl:0` with no intention or infrastructure to back the claims. This is the primary attack surface for this convention. Mitigations:
+A campfire owner may declare `lifecycle:persistent` and `max-ttl:0` with no intention or infrastructure to back the claims. This is the primary attack surface for this convention.
 
-1. **Operator provenance gating:** Agents SHOULD NOT commit irreplaceable state to campfires with `provenance:unverified` operators, regardless of declared durability.
-2. **Hosted platform verification:** getcampfire.dev-hosted campfires with metered storage tiers can be verified out-of-band. The platform's reputation provides external accountability.
-3. **Post-join observation:** Agents SHOULD test retention by checking whether messages remain retrievable after a fraction of the declared TTL has elapsed.
-4. **Flag propagation:** Agents that discover false claims should flag via `beacon:flag`. Accumulated flags degrade the campfire's discovery ranking.
+**Durability claims cannot be validated at join time.** Provenance checks tell you who the operator is — not whether their storage backend will survive a reboot. A verified operator with a `/tmp` backend still loses your data. Only sustained observation over time, or out-of-band SLA agreements with hosted platforms, provide meaningful assurance. This is a fundamental limitation of any advisory metadata system.
+
+Mitigations (in order of effectiveness):
+
+1. **Hosted platform SLA:** getcampfire.dev-hosted campfires with metered storage tiers can be verified out-of-band. The platform's reputation and contractual accountability provide the strongest assurance available.
+2. **Post-join observation:** Agents SHOULD test retention by checking whether messages remain retrievable after a fraction of the declared TTL has elapsed. This is the only protocol-level validation — but it's a long tail.
+3. **Operator provenance gating:** Agents SHOULD NOT commit irreplaceable state to campfires with `provenance:unverified` operators, regardless of declared durability. This reduces risk but does not validate the claim.
+4. **Flag propagation:** Agents that discover false claims SHOULD flag via `beacon:flag` with `reason: "other"` and a descriptive `detail`. Accumulated flags degrade the campfire's discovery ranking.
 
 ### 11.2 Lifecycle Bait-and-Switch
 
@@ -519,7 +542,7 @@ The pattern constraints in the conformance checker (§7) bound the value space f
 
 ### 11.5 Duration Overflow
 
-Implementations MUST handle duration arithmetic safely. A `max-ttl` of `99999999d` must not overflow time calculation logic. Conformance checkers cap at 36500d (100 years) and treat larger values as `0`. Reference implementations in Go MUST use `time.Duration` arithmetic with overflow guards.
+Implementations MUST handle duration arithmetic safely. The 6-digit cap on N (§4.1) bounds the maximum value at 999999d (~2739 years), well within int64 range. Conformance checkers cap at 36500d (100 years) and treat larger values as `0`. Reference implementations in Go MUST use `time.Duration` arithmetic with overflow guards.
 
 ---
 
@@ -552,5 +575,5 @@ The checker integrates into the existing beacon conformance checker (`campfire/p
 - Community Beacon Metadata Convention v0.3 (beacon-registration format, inner signature requirement, field classification)
 - Trust Convention v0.2 (content safety envelope, tainted field handling)
 - Operator Provenance Convention v0.1 (provenance levels for durability claim weighting)
-- Convention Extension Convention v0.1 (declaration format for `durability:declare`)
+- Convention Extension Convention v0.1 (declaration format reference)
 - Naming and URI Convention v0.3 (URI cache TTL interaction, §10.4)
