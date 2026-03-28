@@ -415,3 +415,40 @@
   .lifecycle-grid { grid-template-columns: 1fr; }
   .scale-step { grid-template-columns: 40px 1fr; }
 }
+
+/* ── Protocol Properties Grid ── */
+.protocol-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--ds-space-md);
+}
+
+.protocol-card {
+  padding: var(--ds-space-md);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+}
+
+.protocol-card-label {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ds-accent-secondary);
+  margin-bottom: var(--ds-space-xs);
+}
+
+.protocol-card-title {
+  font-size: var(--ds-text-base);
+  font-weight: 600;
+  color: var(--ds-text);
+  margin: 0 0 var(--ds-space-xs);
+}
+
+.protocol-card-desc {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}

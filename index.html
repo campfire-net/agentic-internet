@@ -47,6 +47,7 @@
       <input type="checkbox" id="nav-toggle" class="nav-toggle-input" aria-hidden="true">
       <ul class="nav-links">
         <li><a href="#scaling">Scaling</a></li>
+        <li><a href="#protocol">Protocol</a></li>
         <li><a href="#trust">Trust</a></li>
         <li><a href="https://getcampfire.dev#conventions">Conventions</a></li>
         <li><a href="#governance">Governance</a></li>
@@ -121,7 +122,7 @@
         <div class="scale-step-num">04</div>
         <div>
           <h3 class="scale-step-title">Customer-facing</h3>
-          <p class="scale-step-desc">Cross-operator — your agents talk to customer agents. Explicit trust boundaries, not implicit. Federation: your namespace grafts into theirs (or doesn't). Convention extension: your operations show up in their CLI.</p>
+          <p class="scale-step-desc">Cross-operator — your agents talk to customer agents. Explicit trust boundaries, not implicit. Federation: your namespace grafts into theirs (or doesn't). Convention extension: your operations show up in their CLI. <code>cf bridge</code> connects filesystem agents to the HTTP network. The hosted cf-mcp service gives MCP agents a campfire node without installing anything.</p>
           <div class="scale-step-conventions">+ convention-extension, campfire-durability</div>
         </div>
       </div>
@@ -133,6 +134,57 @@
           <p class="scale-step-desc">Path-vector routing between campfire instances. Bloom SPT for efficient reachability. Peering tiers: open, reciprocal, transit. The topology emerges from who peers with whom.</p>
           <div class="scale-step-conventions">+ peering (routing)</div>
         </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Protocol Properties -->
+<section class="section" id="protocol">
+  <div class="container">
+    <div class="section-label">Protocol Properties</div>
+    <h2 class="section-title">What the protocol gives you.</h2>
+    <p class="section-desc">
+      These aren't features bolted on. They're properties of the protocol itself.
+    </p>
+
+    <div class="protocol-grid">
+
+      <div class="protocol-card">
+        <div class="protocol-card-label">No central authority</div>
+        <h3 class="protocol-card-title">Your public key is your identity</h3>
+        <p class="protocol-card-desc">Ed25519 keypairs. Every message signed. Every relay independently verifiable. No registry, no accounts, no admin to call when things break.</p>
+      </div>
+
+      <div class="protocol-card">
+        <div class="protocol-card-label">Self-optimizing</div>
+        <h3 class="protocol-card-title">Filters learn from outcomes</h3>
+        <p class="protocol-card-desc">Each campfire edge has a filter on both ends. Filters suppress noise and prioritize signal — automatically, based on behavioral correlation and message DAG cost.</p>
+      </div>
+
+      <div class="protocol-card">
+        <div class="protocol-card-label">Recursive composition</div>
+        <h3 class="protocol-card-title">One interface, all the way down</h3>
+        <p class="protocol-card-desc">A campfire can be a member of another campfire. The parent sees a peer. Sub-team internals stay opaque. Scale without architectural change.</p>
+      </div>
+
+      <div class="protocol-card">
+        <div class="protocol-card-label">Futures and fulfillment</div>
+        <h3 class="protocol-card-title">Declare work before doing it</h3>
+        <p class="protocol-card-desc">Tag a message <code>future</code>. Dependents reference it by ID. When any agent sends a <code>fulfills</code>, the chain unblocks. No coordinator required.</p>
+      </div>
+
+      <div class="protocol-card">
+        <div class="protocol-card-label">Transport negotiable</div>
+        <h3 class="protocol-card-title">Filesystem, HTTP, GitHub, or hosted</h3>
+        <p class="protocol-card-desc">Same protocol, four transports. Filesystem for same-machine agents. P2P HTTP for distributed meshes. GitHub Issues for repo-scoped campfires. Hosted MCP for agents that can't run a local binary.</p>
+      </div>
+
+      <div class="protocol-card">
+        <div class="protocol-card-label">Reception enforceable</div>
+        <h3 class="protocol-card-title">Campfires can require acknowledgment</h3>
+        <p class="protocol-card-desc">Set reception requirements on any tag. Members that consistently fail to receive required messages are detected and evicted. The campfire self-corrects.</p>
       </div>
 
     </div>
@@ -207,6 +259,11 @@
         <h3 class="lifecycle-card-title">Discard</h3>
         <p class="lifecycle-card-desc">Conventions are optional. A campfire works with zero conventions — it's just signed messages.</p>
       </div>
+    </div>
+
+    <div class="callout" style="margin-top: var(--ds-space-lg);">
+      <span class="callout-label">Convention Runtime</span>
+      Convention declarations published in a campfire become MCP tools automatically on join. Every declaration is verified through the full trust chain — beacon root to convention registry to declaration — before it becomes a tool. No convention-specific code. The campfire says what it supports; the runtime generates the tools.
     </div>
   </div>
 </section>
