@@ -5,6 +5,7 @@
 **Status:** Draft
 **Date:** 2026-03-28
 **Target repo:** campfire/docs/conventions/campfire-durability.md
+**Companion guide:** [Application-Owned Persistence](../application-persistence.md) — how applications consume durability metadata
 
 ---
 

@@ -143,4 +143,5 @@ Every campfire seeded with the infrastructure conventions (naming, beacon, routi
 - [Operator Manual](operator-manual.md) — namespaces, custom seeds, trust, registries
 - [How Conventions Work](conventions-howto.md) — declarations, lifecycle, testing, MCP tools
 - [How Registration and Naming Work](registration-howto.md) — URIs, operator roots, grafting, bootstrap
-- [Convention Index](conventions/README.md) — all 9 conventions, dependency graph, lifecycle
+- [Application Persistence](application-persistence.md) — tiered storage for apps building on campfire
+- [Convention Index](conventions/README.md) — all 10 conventions, dependency graph, lifecycle
