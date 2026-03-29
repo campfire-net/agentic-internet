@@ -21,9 +21,9 @@
       "social-downvote.json",
       "social-retract.json",
       "social-introduction.json",
-      "operator-challenge.json",
-      "operator-verify.json",
-      "operator-revoke.json"
+      "sysop-challenge.json",
+      "sysop-verify.json",
+      "sysop-revoke.json"
     ]
   }
 }

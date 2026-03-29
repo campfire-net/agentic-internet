@@ -63,21 +63,21 @@ rd register --org baron
 
 This does three things automatically (if first time):
 
-1. **Creates an operator root** — a lightweight personal namespace campfire (threshold=1, you control it). Stored in `~/.campfire/operator-root.json`.
-2. **Creates a ready namespace** — registered under the operator root as "ready". This is where project registrations live.
+1. **Creates a sysop root** — a lightweight personal namespace campfire (threshold=1, you control it). Stored in `~/.campfire/sysop-root.json`.
+2. **Creates a ready namespace** — registered under the sysop root as "ready". This is where project registrations live.
 3. **Registers the project** — posts a `beacon-registration` message with a `naming:name:galtrader` tag in the ready namespace.
 
-Local aliases are auto-created: `baron` → operator root, `baron.ready` → ready namespace.
+Local aliases are auto-created: `baron` → sysop root, `baron.ready` → ready namespace.
 
-Now `cf://~baron.ready.galtrader` resolves on your machine. Any machine with the operator root beacon can also resolve it.
+Now `cf://~baron.ready.galtrader` resolves on your machine. Any machine with the sysop root beacon can also resolve it.
 
 ### Stage 3: Graft to a Global Root (global naming)
 
 ```bash
-cf register <aietf-root-id> baron <baron-operator-root-id>
+cf register <aietf-root-id> baron <baron-sysop-root-id>
 ```
 
-This registers the operator root under the AIETF public root. Now `cf://baron.ready.galtrader` is globally resolvable by any agent on the AIETF network.
+This registers the sysop root under the AIETF public root. Now `cf://baron.ready.galtrader` is globally resolvable by any agent on the AIETF network.
 
 **Nothing breaks.** The campfire ID doesn't change. Local aliases still work. All internal registrations are preserved. Grafting adds a resolution path — it doesn't remove or modify existing ones.
 
@@ -91,7 +91,7 @@ Message tags:                 ["beacon-registration", "naming:name:galtrader"]
 Message payload:              {"campfire": "<project-id>", "name": "galtrader", "description": "..."}
 ```
 
-The parent campfire's membership and threshold control who can register. For an operator root (threshold=1), you approve your own registrations. For the AIETF public root (threshold >= 5 of 7), registration requires operator consensus.
+The parent campfire's membership and threshold control who can register. For a sysop root (threshold=1), you approve your own registrations. For the AIETF public root (threshold >= 5 of 7), registration requires sysop consensus.
 
 Registration is (or should be) a convention-declared operation — see `declarations/naming-register.json` and [How Conventions Work](conventions-howto.md). The executor handles validation, tag composition, and message posting.
 
@@ -118,7 +118,7 @@ cf alias list
 cf alias remove baron
 ```
 
-Aliases are auto-created when you create an operator root or register a namespace.
+Aliases are auto-created when you create a sysop root or register a namespace.
 
 ### 2. Direct Campfire ID: `cf://<64-hex-chars>`
 
@@ -159,7 +159,7 @@ AIETF Public Root (threshold >= 5/7, global)
   │   │   ├── lobby
   │   │   └── ai-tools
   │   └── directory
-  └── baron (operator root, grafted)
+  └── baron (sysop root, grafted)
       ├── ready (ready namespace)
       │   ├── galtrader (project)
       │   ├── campfire (project)
@@ -167,7 +167,7 @@ AIETF Public Root (threshold >= 5/7, global)
       └── galtrader (game server, separate from rd project)
 ```
 
-### Operator Root
+### Sysop Root
 
 A lightweight personal root registry. Threshold=1 (you control it). Auto-created on first `rd register --org`.
 
@@ -176,11 +176,11 @@ A lightweight personal root registry. Threshold=1 (you control it). Auto-created
 cf root init --name baron
 
 # Auto-created by:
-rd register --org baron  # if no operator root exists yet
+rd register --org baron  # if no sysop root exists yet
 ```
 
-Config: `~/.campfire/operator-root.json`
-Tags: `["directory", "root-registry", "operator-root"]`
+Config: `~/.campfire/sysop-root.json`
+Tags: `["directory", "root-registry", "sysop-root"]`
 
 ### Floating Namespace
 
@@ -192,10 +192,10 @@ A floating namespace becomes rooted when you graft it (register it under a paren
 
 ### Grafting
 
-Connecting a floating namespace or operator root to a naming tree. Uses the standard registration protocol — no special mechanism.
+Connecting a floating namespace or sysop root to a naming tree. Uses the standard registration protocol — no special mechanism.
 
 ```bash
-# Graft operator root under AIETF:
+# Graft sysop root under AIETF:
 cf register <aietf-root-id> baron <baron-root-id>
 
 # Before: cf://~baron/ready.galtrader (local alias only)

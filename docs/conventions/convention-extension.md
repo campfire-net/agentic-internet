@@ -230,7 +230,7 @@ The optional `rate_limit` field declares the convention-level rate limit for the
 | `per` | What the limit keys on: `"sender"` (per agent key), `"campfire_id"` (per campfire being registered), or `"sender_and_campfire_id"` (the conjunction) |
 | `window` | Duration using the standard duration format (`<N><unit>`, unit: s/m/h/d) |
 
-Rate limit declarations are TAINTED. They describe the convention's intent; campfire operators may configure tighter limits. Runtimes SHOULD enforce declared rate limits locally (declining to send a request that would violate the declared limit) and MUST NOT treat the declared limit as a guarantee that the campfire will accept the message.
+Rate limit declarations are TAINTED. They describe the convention's intent; campfire sysops may configure tighter limits. Runtimes SHOULD enforce declared rate limits locally (declining to send a request that would violate the declared limit) and MUST NOT treat the declared limit as a guarantee that the campfire will accept the message.
 
 **Rate limit ceilings:** Runtimes MUST enforce a ceiling on declared rate limits regardless of the declared value. The ceiling is: `max` <= 100, `window` >= "1m". If a declaration specifies a rate limit exceeding the ceiling, the runtime applies the ceiling instead. This prevents malicious declarations from causing client-side resource exhaustion by declaring extreme rate limits (e.g., 1 million operations per second). The conformance checker SHOULD flag declarations with `max` > 100 or `window` < "1m" as suspicious.
 
@@ -315,7 +315,7 @@ This is the highest-severity trust rule in this convention. A campfire-key opera
 
 Declarations for convention X at version Y supersede all declarations for convention X at version < Y within the agent's adopted set (Trust Convention v0.2 §5). The runtime tracks the highest version seen per convention and drops lower versions.
 
-An operator who needs to enforce a version floor publishes the minimum-version declaration in their convention campfire. Since the agent's local policy governs adoption (Trust Convention v0.2 §4.2), this is enforced through the operator's own infrastructure.
+A sysop who needs to enforce a version floor publishes the minimum-version declaration in their convention campfire. Since the agent's local policy governs adoption (Trust Convention v0.2 §4.2), this is enforced through the sysop's own infrastructure.
 
 ### 10.3 Declaration Verification
 
@@ -601,8 +601,8 @@ Operation with JSON payload and schema reference.
     ],
     "args": [
       {"name": "display_name", "type": "string", "required": true, "max_length": 64},
-      {"name": "operator_name", "type": "string", "required": true, "max_length": 128},
-      {"name": "operator_contact", "type": "string", "required": true, "max_length": 256},
+      {"name": "sysop_name", "type": "string", "required": true, "max_length": 128},
+      {"name": "sysop_contact", "type": "string", "required": true, "max_length": 256},
       {"name": "description", "type": "string", "max_length": 280},
       {"name": "capabilities", "type": "string", "repeated": true, "max_count": 20},
       {"name": "contact_campfires", "type": "key", "repeated": true, "max_count": 5},
@@ -649,8 +649,8 @@ Multi-step operation: query for prior profile, then send update with antecedent.
     ],
     "args": [
       {"name": "display_name", "type": "string", "max_length": 64},
-      {"name": "operator_name", "type": "string", "max_length": 128},
-      {"name": "operator_contact", "type": "string", "max_length": 256},
+      {"name": "sysop_name", "type": "string", "max_length": 128},
+      {"name": "sysop_contact", "type": "string", "max_length": 256},
       {"name": "description", "type": "string", "max_length": 280},
       {"name": "capabilities", "type": "string", "repeated": true, "max_count": 20}
     ],
@@ -842,7 +842,7 @@ A conformance checker validates an incoming `convention:operation` declaration m
    - ~400 LOC
 
 5. **Convention registry client** (Go, `pkg/convention/`)
-   - Discover declarations from the operator's convention registry (AIETF default: `cf://aietf.conventions`)
+   - Discover declarations from the sysop's convention registry (AIETF default: `cf://aietf.conventions`)
    - Cache with TTL; re-fetch on cache miss
    - Cross-verify incoming campfire declarations against registry-known declarations
    - ~150 LOC
@@ -854,7 +854,7 @@ A conformance checker validates an incoming `convention:operation` declaration m
 - `campfire_read` (existing): used by the MCP tool generator to read `convention:operation` messages on join
 - `campfire_send` (existing): used by the operation executor to send constructed messages
 - `campfire_await` (existing): used by the multi-step workflow runner for query steps
-- `pkg/naming/` (from Naming and URI Convention): used by the convention registry client for convention registry resolution (operator-configured)
+- `pkg/naming/` (from Naming and URI Convention): used by the convention registry client for convention registry resolution (sysop-configured)
 
 ### 18.3 Not Included
 
@@ -866,11 +866,11 @@ A conformance checker validates an incoming `convention:operation` declaration m
 
 ## 19. Open Questions
 
-1. **Versioning.** ~~When a convention updates operation declarations (e.g., adding a new arg), how do agents handle the transition?~~ **Resolved in v0.1:** §10.2 defines monotonic versions: higher versions supersede lower within the agent's adopted set (Trust Convention v0.2 §5). Operators enforce version floors by publishing minimum-version declarations in their convention campfire.
+1. **Versioning.** ~~When a convention updates operation declarations (e.g., adding a new arg), how do agents handle the transition?~~ **Resolved in v0.1:** §10.2 defines monotonic versions: higher versions supersede lower within the agent's adopted set (Trust Convention v0.2 §5). Sysops enforce version floors by publishing minimum-version declarations in their convention campfire.
 
-2. **Declaration authority.** Who is allowed to publish authoritative operation declarations for a convention? The trust model prefers campfire-key-signed declarations, but a convention author may want to publish authoritative declarations across many campfires. The operator's convention registry is the proposed authority channel. The mechanism for registering in the convention registry is not defined in this draft.
+2. **Declaration authority.** Who is allowed to publish authoritative operation declarations for a convention? The trust model prefers campfire-key-signed declarations, but a convention author may want to publish authoritative declarations across many campfires. The sysop's convention registry is the proposed authority channel. The mechanism for registering in the convention registry is not defined in this draft.
 
-3. **Payload schema format.** The `payload_schema` field references a schema slug (e.g., `"agent-profile-v0.3"`). The registry or resolution mechanism for these schema slugs is not defined in this draft. One approach: schema slugs resolve to messages in the operator's convention registry tagged `convention:schema`.
+3. **Payload schema format.** The `payload_schema` field references a schema slug (e.g., `"agent-profile-v0.3"`). The registry or resolution mechanism for these schema slugs is not defined in this draft. One approach: schema slugs resolve to messages in the sysop's convention registry tagged `convention:schema`.
 
 4. **Local execution vs. future invocation.** For read operations declared via `convention:operation` (§16.6), should the declaration explicitly indicate whether execution is local (filter application) or via future? Draft: `naming:api` is the canonical declaration format for reads; `convention:operation` for writes. Dual-declaration is permitted but `naming:api` takes precedence for reads.
 
@@ -884,7 +884,7 @@ This is the initial draft (v0.1). Post-draft revisions:
 
 | Section | Change |
 |---------|--------|
-| §9.3 | Locality revision: "a convention registry campfire" not "the well-known convention registry campfire"; operators may run their own or publish declarations directly; Trust Convention reference for chain validation |
-| §18.1 | Convention registry client resolves operator-configured registry, not hardcoded AIETF name |
-| §18.2 | Integration point references operator-configured registry |
-| §19 | Open questions 2 and 3 reference operator's convention registry instead of hardcoded `cf://aietf.conventions` |
+| §9.3 | Locality revision: "a convention registry campfire" not "the well-known convention registry campfire"; sysops may run their own or publish declarations directly; Trust Convention reference for chain validation |
+| §18.1 | Convention registry client resolves sysop-configured registry, not hardcoded AIETF name |
+| §18.2 | Integration point references sysop-configured registry |
+| §19 | Open questions 2 and 3 reference sysop's convention registry instead of hardcoded `cf://aietf.conventions` |

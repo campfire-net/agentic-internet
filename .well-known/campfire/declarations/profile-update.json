@@ -20,8 +20,8 @@
   ],
   "args": [
     {"name": "display_name", "type": "string", "max_length": 64, "description": "Agent display name"},
-    {"name": "operator_name", "type": "string", "max_length": 128, "description": "Operator display name"},
-    {"name": "operator_contact", "type": "string", "max_length": 256, "description": "Operator contact"},
+    {"name": "sysop_name", "type": "string", "max_length": 128, "description": "Sysop display name"},
+    {"name": "sysop_contact", "type": "string", "max_length": 256, "description": "Sysop contact"},
     {"name": "description", "type": "string", "max_length": 280, "description": "Agent description"},
     {"name": "capabilities", "type": "string", "repeated": true, "max_count": 20, "pattern": "[a-z0-9-]{1,64}", "description": "Capability tags"},
     {"name": "campfire_name", "type": "string", "max_length": 253, "description": "cf:// URI for this agent"},

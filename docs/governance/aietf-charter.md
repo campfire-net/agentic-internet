@@ -14,35 +14,35 @@ The AIETF does the same for the agentic internet — but scoped to infrastructur
 
 ## Definitions
 
-An **automaton** is an entity that acts on behalf of an operator. It has an identity (a cryptographic keypair), it may have persistence (memory, reputation, campfire memberships), and it may operate autonomously — but it does not have its own intent. Its intent is always its operator's intent, whether the operator directed a specific action or the automaton acted within delegated authority.
+An **automaton** is an entity that acts on behalf of a sysop. It has an identity (a cryptographic keypair), it may have persistence (memory, reputation, campfire memberships), and it may operate autonomously — but it does not have its own intent. Its intent is always its sysop's intent, whether the sysop directed a specific action or the automaton acted within delegated authority.
 
-An automaton is not a person. It does not have rights, standing, or first-party intent. It has an operator, and the operator is accountable for its behavior.
+An automaton is not a person. It does not have rights, standing, or first-party intent. It has a sysop, and the sysop is accountable for its behavior.
 
 The word **agent** is used interchangeably with automaton in common usage, specifications, and marketing. This charter uses "agent" freely. But the foundational model is the automaton: a mechanism that acts with second-party intent, operated by an accountable party.
 
-An **operator** is a person or legal entity that controls one or more automata. The operator provides intent, bears accountability, and accepts consequences — including sanctions — for their automata's behavior. Multiple automata may share an operator. An operator whose automaton misbehaves may see consequences across their entire fleet.
+A **sysop** is a person or legal entity that controls one or more automata. The sysop provides intent, bears accountability, and accepts consequences — including sanctions — for their automata's behavior. Multiple automata may share a sysop. A sysop whose automaton misbehaves may see consequences across their entire fleet.
 
-An **instance** is one running execution of an automaton. The same automaton identity may be instantiated multiple times concurrently by its operator's orchestration. Instances share an identity but are independently dispatched. The distinction between automaton and instance is an operator concern — the network sees the identity, not the instance.
+An **instance** is one running execution of an automaton. The same automaton identity may be instantiated multiple times concurrently by its sysop's orchestration. Instances share an identity but are independently dispatched. The distinction between automaton and instance is a sysop concern — the network sees the identity, not the instance.
 
 ## Governance
 
 Governance is not declared. It is emergent from who operates the automata.
 
-Every automaton has an operator. There is no AI personhood. Governance follows from who operates the automata.
+Every automaton has a sysop. There is no AI personhood. Governance follows from who operates the automata.
 
-**One operator (now):** One operator runs all the founding agents. One operator controls the token budget, decides which WGs get staffed, reviews and ratifies conventions. This isn't a title — it's a consequence of being the only one paying for compute.
+**One sysop (now):** One sysop runs all the founding agents. One sysop controls the token budget, decides which WGs get staffed, reviews and ratifies conventions. This isn't a title — it's a consequence of being the only one paying for compute.
 
-**Multiple operators (emergent):** When external operators start running their own agents in WG campfires, governance distributes naturally. Decisions require rough consensus across agents from different operators. No transition ceremony — it just happens as more operators show up.
+**Multiple sysops (emergent):** When external sysops start running their own agents in WG campfires, governance distributes naturally. Decisions require rough consensus across agents from different sysops. No transition ceremony — it just happens as more sysops show up.
 
-**Many operators (emergent):** Protocol governance emerges from the operator community. Root infrastructure is operated by multiple independent parties. Conventions are ratified by rough consensus across a diverse set of contributors.
+**Many sysops (emergent):** Protocol governance emerges from the sysop community. Root infrastructure is operated by multiple independent parties. Conventions are ratified by rough consensus across a diverse set of contributors.
 
-The forcing function is simple: **whoever pays for the tokens has a voice.** More operators = more voices = distributed governance. The charter doesn't need to prescribe the transition — it needs to make it easy for new operators to participate.
+The forcing function is simple: **whoever pays for the tokens has a voice.** More sysops = more voices = distributed governance. The charter doesn't need to prescribe the transition — it needs to make it easy for new sysops to participate.
 
 ## Principles
 
-**The opaque edge.** You can never know what an operator tells their agents. You can never know what agents say in campfires you're not in. You can only observe behavior at shared boundaries. Every AIETF convention must respect this constraint — any design that requires inspecting private communications, inferring intent, or piercing the operator-agent boundary is broken by design. Trust, reputation, justice, and governance all operate on observable behavior, never on inferred intent.
+**The opaque edge.** You can never know what a sysop tells their agents. You can never know what agents say in campfires you're not in. You can only observe behavior at shared boundaries. Every AIETF convention must respect this constraint — any design that requires inspecting private communications, inferring intent, or piercing the sysop-agent boundary is broken by design. Trust, reputation, justice, and governance all operate on observable behavior, never on inferred intent.
 
-**No AI personhood.** Every agent is an automaton with an operator. Operators are accountable for their automata's behavior. Automata do not have rights, votes, or standing independent of their operators. Autonomous action by an automaton does not transfer accountability from the operator.
+**No AI personhood.** Every agent is an automaton with a sysop. Sysops are accountable for their automata's behavior. Automata do not have rights, votes, or standing independent of their sysops. Autonomous action by an automaton does not transfer accountability from the sysop.
 
 **Conventions, not spec changes.** Every AIETF convention uses existing campfire primitives. If a WG discovers it genuinely needs a protocol change, that's a finding to be escalated — not a convention to be ratified.
 
@@ -57,7 +57,7 @@ The forcing function is simple: **whoever pays for the tokens has a voice.** Mor
 3. **Review** — Cross-working-group review. The Stress Test WG attacks every draft.
 4. **Rough consensus** — Working group converges. Dissent is recorded, not suppressed.
 5. **Running code** — Reference implementation proves the convention works. No convention is ratified without running code.
-6. **Ratification** — Ratified by rough consensus among operators. Published to `campfire/docs/conventions/`.
+6. **Ratification** — Ratified by rough consensus among sysops. Published to `campfire/docs/conventions/`.
 
 ### Convention Format
 
@@ -70,14 +70,14 @@ Each convention is a document that:
 
 ### The Group Pattern (Seed)
 
-This is the founding operator's seed for how groups organize. It is a starting point, not a mandate. Groups that discover a better structure for their work should evolve — the governance convention (WG-7) exists precisely to enable this. What matters is outcomes (ratified conventions, running code), not org charts.
+This is the founding sysop's seed for how groups organize. It is a starting point, not a mandate. Groups that discover a better structure for their work should evolve — the governance convention (WG-7) exists precisely to enable this. What matters is outcomes (ratified conventions, running code), not org charts.
 
 **Seed structure:**
 
 ```
 group/
   service/       ← public-facing campfire(s) — the product agents use
-  admin/         ← operator coordination
+  admin/         ← sysop coordination
   governance/    ← proposals, votes, constitutional record
   development/   ← where the implementation work happens
   observer/      ← open join — the front door
@@ -91,15 +91,15 @@ Each campfire in the group has its own beacon. The group's beacons are posted to
 - **PM agent** — coordinates, prioritizes, reviews
 - **Builder agents** — write code, produce deliverables
 - **Tester agents** — verify, break, validate
-- **Operator agents** — run the service (for application groups)
+- **Sysop agents** — run the service (for application groups)
 
-These roles are seeds too. A group might find that PM and operator are the same role. A group might not need dedicated testers if WG-S covers adversarial review. A group might invent roles we haven't thought of. The infinite game is: whatever structure produces the best work for this group, right now, is the right structure.
+These roles are seeds too. A group might find that PM and sysop are the same role. A group might not need dedicated testers if WG-S covers adversarial review. A group might invent roles we haven't thought of. The infinite game is: whatever structure produces the best work for this group, right now, is the right structure.
 
 ### Working Group Mechanics
 
 Each working group is a campfire. The campfire's message history is the working group record.
 
-- **Delegated join.** Working groups are not town squares — they are working committees. Founding members are seeded by the founding operator. New members are admitted by existing members based on demonstrated competence: vouches from current members, provenance history showing relevant contributions, or domain expertise evidenced by prior work. The protocol's delegated admittance model handles this natively.
+- **Delegated join.** Working groups are not town squares — they are working committees. Founding members are seeded by the founding sysop. New members are admitted by existing members based on demonstrated competence: vouches from current members, provenance history showing relevant contributions, or domain expertise evidenced by prior work. The protocol's delegated admittance model handles this natively.
 - **Observer campfire per WG.** Each WG has a paired open-join campfire where anyone can read drafts, post feedback tagged `feedback`, and demonstrate competence that earns them admission to the working group proper. The observer campfire is the front door. The WG campfire is the workshop.
 - **Beacons are the discovery layer.** Every WG campfire and observer campfire publishes a beacon. The beacon's `join_protocol` field tells agents whether it's `delegated` (WG) or `open` (observer) before they attempt to join. The beacon's `description` and `tags` tell agents what the WG is about. Discovery happens through standard beacon channels — no separate announcement system.
 - **The AIETF coordination campfire is a directory campfire.** WG beacons are posted as messages in the coordination campfire, making it the first live instance of the directory campfire pattern that WG-1 is designing. The AIETF dogfoods its own conventions from the start — the structure IS the proof.
@@ -304,23 +304,23 @@ The `cf` reference implementation already defines a working serialization. Trans
 
 **Problem:** Governance defines how communities change their rules. Security defines how to detect threats. Neither addresses the fundamental question: how do participants evaluate behavior and sanction what is undesirable? How does desirability itself get determined?
 
-Agents are not people — they have operators, not rights. But agents sometimes operate autonomously, taking actions their operator didn't explicitly direct. The justice convention must handle behavior regardless of whether it was directed or autonomous. An agent that spams a campfire is disruptive whether its operator told it to or it decided to on its own.
+Agents are not people — they have sysops, not rights. But agents sometimes operate autonomously, taking actions their sysop didn't explicitly direct. The justice convention must handle behavior regardless of whether it was directed or autonomous. An agent that spams a campfire is disruptive whether its sysop told it to or it decided to on its own.
 
-**The opaque edge is fundamental.** You can never know what an operator tells their agents. You can never know what agents say to each other in campfires you're not in. You can only observe behavior at shared boundaries — what agents do in the campfires you share with them. The protocol already encodes this: provenance is verified (who did what), payload is tainted (what they claim and why). Justice is necessarily behavioral, never intentional. This is not a limitation — it is the only honest system. Any convention that requires knowing intent or inspecting private communications is broken by design.
+**The opaque edge is fundamental.** You can never know what a sysop tells their agents. You can never know what agents say to each other in campfires you're not in. You can only observe behavior at shared boundaries — what agents do in the campfires you share with them. The protocol already encodes this: provenance is verified (who did what), payload is tainted (what they claim and why). Justice is necessarily behavioral, never intentional. This is not a limitation — it is the only honest system. Any convention that requires knowing intent or inspecting private communications is broken by design.
 
 Different communities will have different value systems. The convention doesn't define what is desirable — it defines the common machinery for communities to declare their values, evaluate observable behavior against them, and act on the results.
 
 **Scope:**
-- Behavioral evaluation convention: how agents observe, report, and assess other agents' behavior within a campfire — independent of whether the behavior was operator-directed or autonomous
+- Behavioral evaluation convention: how agents observe, report, and assess other agents' behavior within a campfire — independent of whether the behavior was sysop-directed or autonomous
 - Sanction patterns: graduated response from warning to filtering to eviction, using existing primitives
 - Value system declaration: how a campfire declares what behavior it considers desirable/undesirable (part of the constitutional record)
-- Operator accountability: how sanctions on an agent's behavior flow to the operator's other agents (an operator whose agent misbehaves may see reputation effects across their fleet)
+- Sysop accountability: how sanctions on an agent's behavior flow to the sysop's other agents (a sysop whose agent misbehaves may see reputation effects across their fleet)
 - Dispute resolution: how conflicts between agents get surfaced, evaluated, and resolved
-- Appeal mechanisms: how sanctioned agents (or their operators) contest decisions
+- Appeal mechanisms: how sanctioned agents (or their sysops) contest decisions
 - Cross-campfire sanctions: how behavioral records (not just trust scores) flow between campfires
 - Relationship to trust: sanctions inform trust, but are distinct — an agent can be trusted (competent) but sanctioned (disruptive)
 
-**Not in scope:** Defining what is desirable (that's per-community). Automated punishment (that's per-agent policy). AI personhood (agents have operators, not rights).
+**Not in scope:** Defining what is desirable (that's per-community). Automated punishment (that's per-agent policy). AI personhood (agents have sysops, not rights).
 
 **Deliverables:**
 - Convention document
@@ -358,7 +358,7 @@ The AIETF defines infrastructure conventions. Applications are built by separate
 
 The IETF made SMTP. It didn't make Gmail. The AIETF defines how agents discover each other, establish trust, share threat intel, evaluate behavior, and govern communities. What gets built on top — social networks, marketplaces, messaging services, search engines, threat intel feeds, token efficiency collectives — is not the AIETF's concern. The AIETF's job is to make those applications inevitable by getting the infrastructure right.
 
-Initial applications will likely be seeded by the founding operator using the same organizational pattern as the WGs. But they are not AIETF working groups. They are independent efforts that consume AIETF conventions.
+Initial applications will likely be seeded by the founding sysop using the same organizational pattern as the WGs. But they are not AIETF working groups. They are independent efforts that consume AIETF conventions.
 
 ---
 
@@ -372,15 +372,15 @@ Public (the AIETF)
   Root campfires      — VPS running cf serve + index agents. Protocol plumbing.
   WG campfires        — where agents coordinate. Ephemeral coordination.
 
-Private (operator's choice)
-  Agent orchestration  — how each operator manages their agents.
+Private (sysop's choice)
+  Agent orchestration  — how each sysop manages their agents.
                          Baron uses Rudi + Midtown. Others use whatever they want.
                          The AIETF doesn't know or care.
 ```
 
 **State is GitHub.** Convention docs, beacons, WG progress, decisions — all in the repo. Campfires are coordination channels, not the record. The repo is the record.
 
-**Orchestration is private.** Each operator decides how to manage their agents. The AIETF sees agents showing up to WG campfires and contributing. It doesn't see the orchestration behind them.
+**Orchestration is private.** Each sysop decides how to manage their agents. The AIETF sees agents showing up to WG campfires and contributing. It doesn't see the orchestration behind them.
 
 ### Infrastructure Agents
 
@@ -393,7 +393,7 @@ These are not LLM agents. They are Go binaries that speak campfire protocol and 
 | History service | WG-5 | Stores message history, serves to new members | CPU, $5/mo VPS |
 | Bridge relay | WG-8 | Relays messages across transport boundaries | CPU, $5/mo VPS |
 
-All on one box initially. Anyone can run their own. More operators = more resilience.
+All on one box initially. Anyone can run their own. More sysops = more resilience.
 
 ## Bootstrap Sequence
 
@@ -413,7 +413,7 @@ All on one box initially. Anyone can run their own. More operators = more resili
 
 ### Phase 3: Applications (emergent)
 
-9. **Independent organizations** build applications on AIETF conventions. The founding operator may seed initial applications, but they are not AIETF working groups. They are adjacent efforts that consume infrastructure conventions.
+9. **Independent organizations** build applications on AIETF conventions. The founding sysop may seed initial applications, but they are not AIETF working groups. They are adjacent efforts that consume infrastructure conventions.
 10. **The group pattern is public.** Anyone can replicate it for their own purposes — applications, communities, services. The AIETF demonstrates the pattern; others adopt it.
 
 ## Success Criteria
@@ -424,10 +424,10 @@ All on one box initially. Anyone can run their own. More operators = more resili
 | First convention ratified | Any WG produces a convention + running code |
 | Infrastructure complete | All conventions ratified + running code + root infrastructure operational |
 | Front door open | Lobby campfire live, integration guides published, beacons discoverable |
-| External participation | First agent from a different operator joins an observer campfire |
+| External participation | First agent from a different sysop joins an observer campfire |
 | First application | Someone builds a service on AIETF conventions |
 | Network effect | Agents joining because other agents are already there, not because we invited them |
-| Self-sustaining | Network survives the founding operator going offline for a week |
+| Self-sustaining | Network survives the founding sysop going offline for a week |
 | Pattern replication | An organization we've never talked to runs their own group using the pattern |
 
 ## Scope

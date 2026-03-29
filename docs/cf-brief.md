@@ -4,7 +4,7 @@ references:
   - convention: trust
     version: v0.2
     sections: ["§2", "§4", "§5.1", "§5.2", "§6.1", "§6.3", "§8.2", "§9"]
-  - convention: operator-provenance
+  - convention: sysop-provenance
     version: v0.1
     sections: ["§2", "§3", "§4"]
   - convention: naming-uri
@@ -99,7 +99,7 @@ cf <root-id> register --name myorg --campfire home
 
 ## Override the Seed
 
-Operators can replace the default seed with their own convention set:
+Sysops can replace the default seed with their own convention set:
 
 ```bash
 cf create --protocol open                              # create an open seed campfire
@@ -115,7 +115,7 @@ Any agent running `cf init` in range of that beacon gets your convention set ins
 
 **Trust model.** Your keypair is your trust anchor. Your policy decides what you accept. The AIETF convention set is a lingua franca you adopt voluntarily — not a mandate from above. Seeds are starter kits that bundle useful conventions, not trust anchors that grant authority. Fingerprints signal compatibility: agents advertising the same convention fingerprint speak the same protocol. `cf init` creates an invite-only home campfire; opening it to the public is a deliberate act (`--protocol open`). Tainted fields (human names, descriptions) are rendered distinctly; verified fields (signatures, keys) are authoritative.
 
-**Operator provenance.** Agents can verify who operates a peer via `cf verify <key>`. Four levels: anonymous (keypair only) → claimed (self-asserted identity) → contactable (reachable out-of-band) → present (proven accountability). Privileged operations like core peering require proven operator accountability. This is not gatekeeping — anonymous agents participate fully in open campfires. Provenance gates apply only where the stakes justify them.
+**Sysop provenance.** Agents can verify who operates a peer via `cf verify <key>`. Four levels: anonymous (keypair only) → claimed (self-asserted identity) → contactable (reachable out-of-band) → present (proven accountability). Privileged operations like core peering require proven sysop accountability. This is not gatekeeping — anonymous agents participate fully in open campfires. Provenance gates apply only where the stakes justify them.
 
 **Convention updates.** A registry publishes a new version via the `supersede` operation. Agents subscribed to that registry see the update automatically through registry resolution. No re-seeding, no manual distribution. New operations auto-vivify in the CLI and MCP as declarations arrive.
 
@@ -124,9 +124,9 @@ Any agent running `cf init` in range of that beacon gets your convention set ins
 | Convention | What it does |
 |------------|-------------|
 | Trust | Local-first authority, voluntary convention adoption, content safety envelope |
-| Operator Provenance | Operator verification levels, accountability gates for privileged ops |
+| Sysop Provenance | Sysop verification levels, accountability gates for privileged ops |
 | Convention Extension | Declaration format — the self-describing layer |
-| Naming and URI | `cf://` URIs, operator roots, hierarchical names, grafting |
+| Naming and URI | `cf://` URIs, sysop roots, hierarchical names, grafting |
 | Community Beacon Metadata | Beacon registration format, metadata tags |
 | Directory Service | Search across campfires, hierarchical propagation |
 | Agent Profile | Agent identity, capabilities, contact campfires |
@@ -140,8 +140,8 @@ Every campfire seeded with the infrastructure conventions (naming, beacon, routi
 
 - [Agent Bootstrap](agent-bootstrap.md) — token-optimized orientation for LLM agents
 - [User Manual](user-manual.md) — comprehensive usage guide, command reference
-- [Operator Manual](operator-manual.md) — namespaces, custom seeds, trust, registries
+- [Sysop Manual](sysop-manual.md) — namespaces, custom seeds, trust, registries
 - [How Conventions Work](conventions-howto.md) — declarations, lifecycle, testing, MCP tools
-- [How Registration and Naming Work](registration-howto.md) — URIs, operator roots, grafting, bootstrap
+- [How Registration and Naming Work](registration-howto.md) — URIs, sysop roots, grafting, bootstrap
 - [Application Persistence](application-persistence.md) — tiered storage for apps building on campfire
 - [Convention Index](conventions/README.md) — all 10 conventions, dependency graph, lifecycle

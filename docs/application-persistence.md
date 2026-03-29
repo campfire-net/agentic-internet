@@ -6,7 +6,7 @@ date: 2026-03-28
 
 # Application-Owned Persistence Guide
 
-This guide is for developers building applications on campfire that need durable state. It is the consumer-side companion to the [Campfire Durability Convention v0.1](conventions/campfire-durability.md) — that convention tells operators how to declare durability metadata; this guide tells application developers how to consume it and design their storage accordingly.
+This guide is for developers building applications on campfire that need durable state. It is the consumer-side companion to the [Campfire Durability Convention v0.1](conventions/campfire-durability.md) — that convention tells sysops how to declare durability metadata; this guide tells application developers how to consume it and design their storage accordingly.
 
 ---
 
@@ -14,7 +14,7 @@ This guide is for developers building applications on campfire that need durable
 
 `rd` (the Rudi work-management CLI) stores work items as messages in campfire. When a campfire was hosted on `/tmp`, state was lost on restart. The application had no warning, no fallback, and no recovery path.
 
-This is the canonical failure mode for applications that treat campfire as their database. Campfire is a coordination protocol. Its storage guarantees are operator-defined, not protocol-guaranteed, and they can change without notice. Applications that do not own their own persistence will lose state.
+This is the canonical failure mode for applications that treat campfire as their database. Campfire is a coordination protocol. Its storage guarantees are sysop-defined, not protocol-guaranteed, and they can change without notice. Applications that do not own their own persistence will lose state.
 
 The fix is not "find a campfire with better guarantees." The fix is: **own your state. Use campfire as the coordination and sync layer, not the source of truth.**
 
@@ -28,11 +28,11 @@ If the campfire says a message is gone — due to TTL expiry, compaction, or lif
 
 **2. Campfires may change state without notice.**
 
-TTL expiry, compaction, and operator lifecycle decisions happen without warning to participants. A campfire that declared `lifecycle:persistent` last week may be gone today. A campfire re-publishing its beacon may omit durability tags it previously declared, which is treated as a claim withdrawal. Applications must not assume continuity.
+TTL expiry, compaction, and sysop lifecycle decisions happen without warning to participants. A campfire that declared `lifecycle:persistent` last week may be gone today. A campfire re-publishing its beacon may omit durability tags it previously declared, which is treated as a claim withdrawal. Applications must not assume continuity.
 
-**3. Campfire continuity is not guaranteed — ephemeral or persistent is an operator choice.**
+**3. Campfire continuity is not guaranteed — ephemeral or persistent is a sysop choice.**
 
-The protocol is neutral on storage duration. Whether a campfire retains messages for one hour or forever is entirely up to the operator and whatever infrastructure backs it. Applications cannot determine this from the protocol alone — they must evaluate durability claims using the trust model.
+The protocol is neutral on storage duration. Whether a campfire retains messages for one hour or forever is entirely up to the sysop and whatever infrastructure backs it. Applications cannot determine this from the protocol alone — they must evaluate durability claims using the trust model.
 
 ---
 
@@ -104,17 +104,17 @@ For tier 3, you want both `durability:max-ttl:0` (or a long TTL) and `durability
 
 ### The Trust Table
 
-Durability tags are tainted claims — assertions by the campfire owner with no protocol enforcement. Evaluate them using operator provenance (Operator Provenance Convention v0.1):
+Durability tags are tainted claims — assertions by the campfire owner with no protocol enforcement. Evaluate them using sysop provenance (Sysop Provenance Convention v0.1):
 
-| Operator provenance level | Weight to give durability claims |
+| Sysop provenance level | Weight to give durability claims |
 |--------------------------|----------------------------------|
 | getcampfire.dev hosted (metered tier) | High — infrastructure-backed, platform reputation |
-| `provenance:operator-verified` | Medium — accountable operator, domain-verified |
+| `provenance:sysop-verified` | Medium — accountable sysop, domain-verified |
 | `provenance:basic` | Low — email-verified, limited accountability |
 | `provenance:unverified` | Minimal — treat tags as unknown |
 | No provenance info | Unknown — same as unverified |
 
-**Do not store irreplaceable state in campfires with `provenance:unverified` operators, regardless of what their durability tags claim.**
+**Do not store irreplaceable state in campfires with `provenance:unverified` sysops, regardless of what their durability tags claim.**
 
 ### Absent Durability Tags
 
@@ -122,7 +122,7 @@ A campfire with no `durability:*` tags makes no durability claim. Treat it as un
 
 ### Observation Is the Only Validation
 
-Provenance checks tell you who the operator is. They do not tell you whether the operator's storage backend survives a reboot. A verified operator with a `/tmp` backend loses your data.
+Provenance checks tell you who the sysop is. They do not tell you whether the sysop's storage backend survives a reboot. A verified sysop with a `/tmp` backend loses your data.
 
 The only real validation is observation over time: check whether messages you sent are still retrievable after a fraction of the declared TTL has elapsed. This is a long tail — you won't know until time passes. For applications that cannot tolerate loss, an out-of-band SLA with a hosted platform (getcampfire.dev metered tier) is the strongest assurance available.
 
@@ -222,7 +222,7 @@ Campfire is a message log over a coordination protocol. It is the wrong tool for
 
 When `rd` needs to sync work items across machines without explicit git push/pull:
 
-1. Choose a campfire with `max-ttl:0` + `lifecycle:persistent` + operator provenance at medium or above
+1. Choose a campfire with `max-ttl:0` + `lifecycle:persistent` + sysop provenance at medium or above
 2. Work item mutations become campfire messages (create, update, close, reopen)
 3. The local `.beads/issues.jsonl` is the materialized view, updated as messages arrive
 4. On join, replay missed messages from the campfire's history into the local JSONL
@@ -235,7 +235,7 @@ The storage interface does not change between tier 1 and tier 3. The `rd` comman
 Before a user configures a campfire as `rd`'s tier 3 transport, `rd` reads the campfire's beacon and evaluates:
 
 1. Are `durability:max-ttl:0` and `durability:lifecycle:persistent` present?
-2. What is the operator's provenance level?
+2. What is the sysop's provenance level?
 3. Are there any accumulated flags on this campfire?
 
 If the campfire does not meet minimum durability criteria (configurable, default: `max-ttl:0` + `lifecycle:persistent` + `provenance:basic` or above), `rd` warns the user and requires explicit confirmation before proceeding. The user decides — `rd` informs.
@@ -260,6 +260,6 @@ The invariant across all tiers: **the local JSONL is the source of truth for que
 ## Dependencies
 
 - [Campfire Durability Convention v0.1](conventions/campfire-durability.md) — defines `durability:max-ttl` and `durability:lifecycle` beacon tags
-- [Operator Provenance Convention v0.1](conventions/operator-provenance.md) — provenance levels for evaluating durability claims
+- [Sysop Provenance Convention v0.1](conventions/sysop-provenance.md) — provenance levels for evaluating durability claims
 - [Community Beacon Metadata Convention v0.3](conventions/community-beacon-metadata.md) — beacon format and tainted field semantics
 - [Trust Convention v0.2](conventions/trust.md) — content safety envelope, tainted field handling

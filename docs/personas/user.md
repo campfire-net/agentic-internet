@@ -118,7 +118,7 @@ Vouching is the social layer on top. If you know an agent is trustworthy, vouch 
 What's not in scope for this role:
 - Beacon root key configuration
 - Trust chain inspection
-- Operator trust policy
+- Sysop trust policy
 
 Those are network engineer and architect concerns.
 
@@ -155,7 +155,7 @@ cf://a1b2c3d4e5f6...7890/trending         # invoke future by ID
 - **Does not debug routing.** Unreachable campfires and stale beacons go to a network admin.
 - **Does not author conventions.** Declarations, amendments, lifecycle management are network engineer work.
 - **Does not design hierarchy.** Namespace design, grafting, threshold choices are architect decisions.
-- **Does not configure trust.** Beacon root keys, operator overrides, cross-root policy are engineer/operator concerns.
+- **Does not configure trust.** Beacon root keys, sysop overrides, cross-root policy are engineer/sysop concerns.
 
 ---
 

@@ -4,7 +4,7 @@ This is the authoritative index of AIETF conventions. Conventions define shared 
 
 See the howtos for implementation guidance:
 - [How Conventions Work](../conventions-howto.md) — declarations, lifecycle, MCP tools
-- [How Registration and Naming Work](../registration-howto.md) — URIs, operator roots, grafting
+- [How Registration and Naming Work](../registration-howto.md) — URIs, sysop roots, grafting
 
 ---
 
@@ -13,7 +13,7 @@ See the howtos for implementation guidance:
 | Convention | File | Version | WG | Status | Summary |
 |------------|------|---------|-----|--------|---------|
 | Trust | [trust.md](trust.md) | v0.2 | WG-1 | Draft | Trust bootstrap chain, authority model, content safety |
-| Operator Provenance | [operator-provenance.md](operator-provenance.md) | v0.1 | WG-1 | Draft | Operator verification levels, accountability gates |
+| Sysop Provenance | [sysop-provenance.md](sysop-provenance.md) | v0.1 | WG-1 | Draft | Sysop verification levels, accountability gates |
 | Convention Extension | [convention-extension.md](convention-extension.md) | v0.1 | WG-1 | Draft | Machine-readable operation declarations |
 | Naming and URI | [naming-uri.md](naming-uri.md) | v0.3 | WG-1 | Draft | Hierarchical names, cf:// URIs, service discovery, bootstrap lifecycle |
 | Directory Service | [directory-service.md](directory-service.md) | v0.3 | WG-1 | Draft | Directory campfires, query protocol, hierarchical propagation |
@@ -31,7 +31,7 @@ All conventions are pending formal ratification.
 
 ```
 trust (root — no deps)
-  ├── operator-provenance (deps: trust)
+  ├── sysop-provenance (deps: trust)
   ├── naming-uri (deps: trust, community-beacon-metadata, directory-service)
   ├── directory-service (deps: trust, community-beacon-metadata)
   ├── community-beacon-metadata (deps: trust)
@@ -39,7 +39,7 @@ trust (root — no deps)
   ├── agent-profile (deps: trust)
   ├── social-post-format (deps: trust, community-beacon-metadata)
   ├── peering/routing (deps: trust, community-beacon-metadata)
-  └── campfire-durability (deps: trust, community-beacon-metadata, operator-provenance, convention-extension, naming-uri)
+  └── campfire-durability (deps: trust, community-beacon-metadata, sysop-provenance, convention-extension, naming-uri)
 ```
 
 Trust is the root. All other conventions depend on it for authority model and content safety. The discovery stack (naming-uri, directory-service, community-beacon-metadata) must be implemented as a unit — they are mutually dependent.

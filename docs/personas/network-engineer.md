@@ -302,9 +302,9 @@ cf audit cf://aietf.social.lobby | grep convention:operation
 
 ## Boundaries
 
-- **Does not design namespace hierarchy.** Which segments to use for a new operator, where to graft a floating namespace, and multi-tenant naming design are architect decisions.
+- **Does not design namespace hierarchy.** Which segments to use for a new sysop, where to graft a floating namespace, and multi-tenant naming design are architect decisions.
 - **Does not make threshold decisions.** Setting `--threshold N` on a campfire requires understanding the security/availability trade-off — escalate to the architect.
-- **Does not resolve cross-network trust policy.** Cross-root trust decisions (§9 of trust convention) affect multiple operator networks and require AIETF-level discussion.
+- **Does not resolve cross-network trust policy.** Cross-root trust decisions (§9 of trust convention) affect multiple sysop networks and require AIETF-level discussion.
 - **Escalates breaking changes.** A convention amendment that changes the semantics of an existing operation (not just adds fields) is a breaking change requiring WG ratification — not a unilateral engineer push.
 
 ---

@@ -138,14 +138,14 @@ Use `cf trust --trace` to walk each link. Common failures:
 | "declaration signature mismatch" | Declaration not signed by convention registry's campfire key |
 | "TOFU violation" | Declaration changed since last pin — runtime blocked it |
 
-A TOFU violation requires operator intervention to resolve: the operator must inspect the new declaration, verify it's legitimate, and update the pin. An admin can diagnose and report it but cannot resolve it without escalating.
+A TOFU violation requires sysop intervention to resolve: the sysop must inspect the new declaration, verify it's legitimate, and update the pin. An admin can diagnose and report it but cannot resolve it without escalating.
 
 ### naming-uri v0.3 §6 — Hierarchy and Root Registry
 
 Understanding hierarchy helps diagnose naming failures:
 
 - **§6.1 Public root registry**: The AIETF root registry is the top of the public naming tree. Campfires registered there have globally resolvable names.
-- **§6.2 Operator root**: An operator's personal root (e.g., `baron`) is registered under the public root. If the operator root campfire is unreachable, all names under it fail to resolve.
+- **§6.2 Sysop root**: A sysop's personal root (e.g., `baron`) is registered under the public root. If the sysop root campfire is unreachable, all names under it fail to resolve.
 - **§6.3 Floating namespaces**: A namespace not yet grafted into the global tree. Discoverable via beacons but not resolvable by name from outside.
 - **§6.4 Grafting**: The process of connecting a floating namespace to the tree. Grafting creates a permanent registration in the parent.
 
@@ -155,7 +155,7 @@ Understanding hierarchy helps diagnose naming failures:
 # Check if the top-level namespace campfire is reachable
 cf ping cf://baron
 
-# If that fails, check if the operator root is in any routing table
+# If that fails, check if the sysop root is in any routing table
 cf inspect cf://aietf.directory.root --routing | grep baron
 ```
 
@@ -182,7 +182,7 @@ cf traceroute <campfire-uri>
 cf inspect <campfire-uri> --routing --verbose | grep withdrawn
 ```
 
-If no routing path exists and the beacon is stale: `cf beacon refresh <campfire-uri>` if you have write access, or escalate to the campfire operator.
+If no routing path exists and the beacon is stale: `cf beacon refresh <campfire-uri>` if you have write access, or escalate to the campfire sysop.
 
 ### Task 2: Verify a trust chain is intact
 
@@ -244,15 +244,15 @@ Resolution depends on network topology. Escalate to a network engineer if the pr
 - **Does not build new tools.** Writing Go code, creating index agents, or implementing convention declarations is engineer work.
 - **Does not author or amend conventions.** Proposing changes to convention specs, creating `convention:operation` declarations, and submitting AIETF proposals are out of scope.
 - **Does not make design decisions.** Routing topology, threshold choices, namespace hierarchy, and trust policy changes require an architect or engineer.
-- **Escalates TOFU violations.** A pin violation is a security event — report it to the operator. Do not modify pins without authorization.
-- **Escalates cross-root trust issues.** If a campfire from another operator's root is behaving unexpectedly, that's a cross-root trust question requiring engineer-level analysis.
+- **Escalates TOFU violations.** A pin violation is a security event — report it to the sysop. Do not modify pins without authorization.
+- **Escalates cross-root trust issues.** If a campfire from another sysop's root is behaving unexpectedly, that's a cross-root trust question requiring engineer-level analysis.
 
 ---
 
 ## Relevant Docs
 
 - `docs/agent-bootstrap.md` — token-optimized orientation (start here if you're an LLM agent)
-- `docs/registration-howto.md` — understand the naming hierarchy you're maintaining: operator roots, floating namespaces, grafting lifecycle
+- `docs/registration-howto.md` — understand the naming hierarchy you're maintaining: sysop roots, floating namespaces, grafting lifecycle
 - `docs/conventions-howto.md` — understand what convention declarations are and why trust chain failures block tools
 
 ---

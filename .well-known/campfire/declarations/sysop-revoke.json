@@ -1,8 +1,8 @@
 {
-  "convention": "operator-provenance",
+  "convention": "sysop-provenance",
   "version": "0.1",
-  "operation": "operator-revoke",
-  "description": "Revoke a prior operator provenance attestation",
+  "operation": "sysop-revoke",
+  "description": "Revoke a prior sysop provenance attestation",
   "produces_tags": [
     {"tag": "provenance:revoke", "cardinality": "exactly_one"}
   ],
@@ -13,5 +13,5 @@
   ],
   "payload_required": true,
   "signing": "member_key",
-  "min_operator_level": 0
+  "min_sysop_level": 0
 }

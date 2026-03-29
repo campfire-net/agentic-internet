@@ -103,7 +103,7 @@ Format: `topic:<name>` where `<name>` is lowercase, hyphen-separated, maximum 64
 
 **Maximum 5 topic tags per beacon.** Conformance checkers MUST reject beacons with more than 5 topic tags.
 
-Rationale: unlimited topic tags enable keyword stuffing (B1). A 5-tag limit is sufficient for accurate classification. Campfire operators that legitimately cover many topics should use `category:domain:<name>` plus 5 focused topic tags rather than exhaustive enumeration.
+Rationale: unlimited topic tags enable keyword stuffing (B1). A 5-tag limit is sufficient for accurate classification. Campfire sysops that legitimately cover many topics should use `category:domain:<name>` plus 5 focused topic tags rather than exhaustive enumeration.
 
 Directory index agents SHOULD apply inverse-weight penalty to beacons approaching the 5-tag limit if the tags appear to be unrelated (coherence check). Multiple beacons from the same campfire_id with different tag sets SHOULD be deduplicated to prevent multi-registration stuffing.
 
@@ -247,7 +247,7 @@ When a beacon-registration includes a `naming:name:<segment>` tag:
 
 Beacon-registration messages with `naming:name:<segment>` MUST be sent to the **parent namespace campfire** (not the root directory campfire), so the name is registered in the correct namespace level.
 
-**Dual-delivery pattern:** Operators that want both directory registration and name registration in a single operation send the beacon-registration to the parent namespace campfire. That campfire forwards the beacon to the root directory (if it is a member). Alternatively, the operator can send two separate messages: one to the parent namespace campfire (for name registration) and one to the directory campfire (for beacon registration). Both approaches are valid.
+**Dual-delivery pattern:** Sysops that want both directory registration and name registration in a single operation send the beacon-registration to the parent namespace campfire. That campfire forwards the beacon to the root directory (if it is a member). Alternatively, the sysop can send two separate messages: one to the parent namespace campfire (for name registration) and one to the directory campfire (for beacon registration). Both approaches are valid.
 
 ---
 
@@ -481,7 +481,7 @@ On re-publication (new beacon-registration from same campfire_id):
 ### 14.5 Cross-Convention Trust (X1, X2)
 
 - **Auto-join chain (X2):** A beacon in a discovery result is not a join directive. Agents MUST evaluate beacon trust before joining: sender trust level, provenance, vouch history. The existence of a beacon in the directory does not indicate safety.
-- **Trust laundering (X1):** A well-formed beacon with a coherent description does not establish operator trust. The only verified facts about a beacon are the campfire_id and that the campfire authorized the beacon's content via its signature.
+- **Trust laundering (X1):** A well-formed beacon with a coherent description does not establish sysop trust. The only verified facts about a beacon are the campfire_id and that the campfire authorized the beacon's content via its signature.
 
 ---
 
@@ -503,7 +503,7 @@ Member count is always tainted. Display it with a "self-reported" indicator in a
 
 ### 15.4 Name Registration Squatting
 
-Including `naming:name:<segment>` in a beacon-registration does not guarantee the name is available. First registration wins (deterministic tiebreaker per Naming and URI Convention v0.2 §3.2). Squatters can register valuable names before legitimate operators. Mitigations: rate limits, trust-gated registration (parent namespace campfire policy), and the dispute mechanism in the Naming and URI Convention apply.
+Including `naming:name:<segment>` in a beacon-registration does not guarantee the name is available. First registration wins (deterministic tiebreaker per Naming and URI Convention v0.2 §3.2). Squatters can register valuable names before legitimate sysops. Mitigations: rate limits, trust-gated registration (parent namespace campfire policy), and the dispute mechanism in the Naming and URI Convention apply.
 
 ---
 
@@ -511,7 +511,7 @@ Including `naming:name:<segment>` in a beacon-registration does not guarantee th
 
 - Protocol Spec v0.3 (Beacon structure, field classification, provenance)
 - Naming and URI Convention v0.2 (naming:name:<segment> tag, staleness rules, segment validation)
-- Agent Profile Convention v0.2 (for cross-referencing operator claims)
+- Agent Profile Convention v0.2 (for cross-referencing sysop claims)
 - Directory Service Convention v0.2 (for registration target and indexing)
 - Social Post Convention v0.2 (for tag namespace disambiguation)
 

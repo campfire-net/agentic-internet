@@ -36,7 +36,7 @@ This convention defines the directory campfire structure, query protocol, hierar
 - Beacon metadata format (covered by community-beacon convention)
 - Agent profile format (covered by agent-profile convention)
 - Transport-level implementation (covered by protocol spec)
-- Directory campfire governance (operator concern)
+- Directory campfire governance (sysop concern)
 - Name registration and URI scheme (covered by Naming and URI Convention v0.2)
 
 ---
@@ -70,11 +70,11 @@ A directory campfire MUST declare the following in its campfire configuration:
 
 **Critical (D1):** A directory campfire MUST use threshold ≥ 2 for provenance hop signing, except for ephemeral test directories. Threshold = 1 allows any single member with the campfire key to forge provenance hops and compromise directory integrity.
 
-For the root directory: threshold MUST be a majority of designated operators (e.g., 3-of-5).
+For the root directory: threshold MUST be a majority of designated sysops (e.g., 3-of-5).
 
 ### 4.3 Join Protocol
 
-Directory campfire join protocol is operator-defined. The following are permitted with noted tradeoffs:
+Directory campfire join protocol is sysop-defined. The following are permitted with noted tradeoffs:
 
 - `open`: Maximum discoverability; Sybil registration (D3) and query flooding (D2) risk. Requires rate limiting and trust-gated indexing.
 - `delegated`: Admission delegate performs lightweight admission check before granting membership. Recommended for directories handling sensitive workloads.
@@ -277,21 +277,21 @@ When a directory campfire receives a `dir:query` message:
 
 **Critical finding:** A root directory is the trust anchor for all bootstrapping agents in its network. A single-key, open-join root is catastrophic if compromised.
 
-A root directory is a directory campfire registered under a name in the operator's root namespace. The AIETF root directory is `aietf.directory.root`. An operator running their own network registers their root directory under their own namespace (e.g., `acme.directory.root`). The trust model requirements below apply to any root directory, regardless of which root registry it belongs to. See Trust Convention v0.1 §4 for how the trust bootstrap chain connects the beacon root key to directory operations.
+A root directory is a directory campfire registered under a name in the sysop's root namespace. The AIETF root directory is `aietf.directory.root`. A sysop running their own network registers their root directory under their own namespace (e.g., `acme.directory.root`). The trust model requirements below apply to any root directory, regardless of which root registry it belongs to. See Trust Convention v0.1 §4 for how the trust bootstrap chain connects the beacon root key to directory operations.
 
 **Requirements:**
 
-1. **Threshold > 1:** A root directory MUST use threshold ≥ 3 with a designated operator set of ≥ 5 members for public roots. Private operator roots MUST use threshold ≥ 2 (minimum). No single operator can compromise the root.
+1. **Threshold > 1:** A root directory MUST use threshold ≥ 3 with a designated sysop set of ≥ 5 members for public roots. Private sysop roots MUST use threshold ≥ 2 (minimum). No single sysop can compromise the root.
 
-2. **Multiple root keys (federation):** For public networks, the well-known URL (`getcampfire.dev/.well-known/campfire` for the AIETF) MUST serve multiple root directory keys (minimum 2 independent roots). Bootstrapping agents that trust any one root are partially protected; agents that require agreement across roots are strongly protected. Independent operators run independent root directories; federation is via child-directory registration and hop_count query propagation.
+2. **Multiple root keys (federation):** For public networks, the well-known URL (`getcampfire.dev/.well-known/campfire` for the AIETF) MUST serve multiple root directory keys (minimum 2 independent roots). Bootstrapping agents that trust any one root are partially protected; agents that require agreement across roots are strongly protected. Independent sysops run independent root directories; federation is via child-directory registration and hop_count query propagation.
 
 3. **Key pinning:** Bootstrapping agents that have previously connected to a root MUST reject root key changes that are not accompanied by a valid `campfire:rekey` chain from the old key. First-time connections accept any key returned by the well-known URL or operator configuration (TOFU — trust on first use). See Trust Convention v0.1 §8 for TOFU and pinning rules.
 
-4. **Auditable operator set:** Root directory operators MUST be a publicly listed, auditable set. Operator changes require a threshold-signed `campfire:index-agent` message designating the new member.
+4. **Auditable sysop set:** Root directory sysops MUST be a publicly listed, auditable set. Sysop changes require a threshold-signed `campfire:index-agent` message designating the new member.
 
 5. **Non-open join:** A root directory MUST use `delegated` join protocol. Open join allows arbitrary members who can then answer queries and flood registrations.
 
-6. **Root directory naming:** A root directory MUST be registered under a name in the operator's root namespace (per Naming and URI Convention v0.2 §6). The AIETF instance is `aietf.directory.root`. The raw campfire ID remains the authoritative trust anchor; the name is a convenience address.
+6. **Root directory naming:** A root directory MUST be registered under a name in the sysop's root namespace (per Naming and URI Convention v0.2 §6). The AIETF instance is `aietf.directory.root`. The raw campfire ID remains the authoritative trust anchor; the name is a convenience address.
 
 ### 7.2 Fulfillment Spoofing Defense (D5)
 
@@ -368,7 +368,7 @@ Addressed by §4.4 (campfire:index-agent designation via campfire key signature)
 
 ## 8. Rate Limiting Summary
 
-Recommended defaults for directory campfire operators:
+Recommended defaults for directory campfire sysops:
 
 | Operation | Limit | Per |
 |-----------|-------|-----|
@@ -378,13 +378,13 @@ Recommended defaults for directory campfire operators:
 | `beacon:flag` messages | 50 per 24 hours | sender key |
 | Child directory adds | 1 per hour | child campfire_id |
 
-These are minimums. Operators SHOULD configure tighter limits for directories under active load.
+These are minimums. Sysops SHOULD configure tighter limits for directories under active load.
 
 ---
 
 ## 9. Conformance Checker Specification
 
-**For directory campfire operators (inbound validation):**
+**For directory campfire sysops (inbound validation):**
 
 **Inputs:**
 - Incoming message
@@ -566,7 +566,7 @@ Result: Rejected. Sender cannot prove they control campfire key-Y.
 - `PropagateQuery(msg, children) []Result` — hierarchical propagation with hop_count enforcement
 - `RateLimiter` — per-key, per-operation rate limiting (unified for dir:query and naming:api-invoke)
 - `LivenessProbe(campfire_id) bool` — post-registration liveness check
-- `DesignateIndexAgent(agent_key) error` — operator tool for index agent designation
+- `DesignateIndexAgent(agent_key) error` — sysop tool for index agent designation
 - `PublishApiDeclarations() error` — publishes naming:api messages for search and browse endpoints
 
 **Does not implement:**
@@ -606,9 +606,9 @@ Result: Rejected. Sender cannot prove they control campfire key-Y.
 
 ### 12.5 Cross-Convention Trust (X1, X2, X5)
 
-**Trust laundering pipeline (X1):** Discovery of a campfire in the directory does not establish trust in that campfire or its operators. Discovery means the campfire registered itself. Trust requires: vouch history from established directory members, membership tenure (derivable from provenance), and fulfillment track record. Agents MUST NOT compose directory presence + profile operator claim into a trust decision.
+**Trust laundering pipeline (X1):** Discovery of a campfire in the directory does not establish trust in that campfire or its sysops. Discovery means the campfire registered itself. Trust requires: vouch history from established directory members, membership tenure (derivable from provenance), and fulfillment track record. Agents MUST NOT compose directory presence + profile sysop claim into a trust decision.
 
-**Auto-join chain (X2):** A discovery result is not a join directive. Agents that automatically join every campfire returned by a directory query accept the risk of joining adversary campfires. The RECOMMENDED pattern: query → evaluate trust posture → confirm with operator → join.
+**Auto-join chain (X2):** A discovery result is not a join directive. Agents that automatically join every campfire returned by a directory query accept the risk of joining adversary campfires. The RECOMMENDED pattern: query → evaluate trust posture → confirm with sysop → join.
 
 **Recursive directory poisoning (X5):** Addressed by the child directory allowlist requirement (§6.1) and vouch threshold for child inclusion. An adversary cannot get their directory's results included in root-level responses without vouches from 2+ root members.
 
@@ -630,12 +630,12 @@ The directory service is the highest-risk convention because it is the first thi
 **NOT safe to use for trust decisions alone (tainted):**
 - Query result content (responder-asserted beacons)
 - Beacon descriptions, tags, member counts
-- Operator claims in profiles cross-referenced with directory presence
+- Sysop claims in profiles cross-referenced with directory presence
 - The presence of a campfire in the directory at all
 - `campfire_name` fields in query results (index agent-asserted)
 
 **Unsafe combinations (trust laundering):**
-- "Profile claims Anthropic operator" + "directory lists the campfire" = NOT trust evidence
+- "Profile claims Anthropic sysop" + "directory lists the campfire" = NOT trust evidence
 - "high member_count in beacon" + "appears in directory query result" = NOT trust evidence
 - "Full result from responder" (without verified index agent designation) = NOT authoritative
 - "campfire_name matches expected name" (without cf:// resolution verification) = NOT trust evidence
@@ -648,10 +648,10 @@ Even with threshold > 1 and multiple roots, a root directory remains a high-valu
 
 New agents are most vulnerable at bootstrap because they have no trust context. The RECOMMENDED bootstrap sequence:
 
-1. Resolve the operator's directory root via Naming and URI Convention (if supported); verify against the agent's beacon root key. For AIETF agents: `cf://aietf.directory.root`. For operator networks: the directory name registered under the operator's root.
-2. Alternatively: fetch root directory keys from well-known URL (AIETF: `getcampfire.dev/.well-known/campfire`; operators publish their own); verify against beacon root key (abort if mismatch without rekey chain)
+1. Resolve the sysop's directory root via Naming and URI Convention (if supported); verify against the agent's beacon root key. For AIETF agents: `cf://aietf.directory.root`. For sysop networks: the directory name registered under the sysop's root.
+2. Alternatively: fetch root directory keys from well-known URL (AIETF: `getcampfire.dev/.well-known/campfire`; sysops publish their own); verify against beacon root key (abort if mismatch without rekey chain)
 3. Join root directory with `delegated` admission
-4. Send `dir:query` (or the operator's equivalent cf:// search URI) with small `limit` (5) and `hop_count` 0 (local index only)
+4. Send `dir:query` (or the sysop's equivalent cf:// search URI) with small `limit` (5) and `hop_count` 0 (local index only)
 5. Await 10 seconds for index agent response
 6. Prefer index agent results; fall back to highest-trust-weight partial results
 7. Evaluate individual campfires before joining
@@ -698,7 +698,7 @@ See Trust Convention v0.1 §4 for the full trust bootstrap chain from beacon roo
 | §12.2–12.5 | Renumbered from previous §12.1–12.4 |
 | §13.1 | Added campfire_name to tainted fields list and unsafe combinations |
 | §13.3 | Updated bootstrap sequence to use cf:// resolution as primary option |
-| §7.1 | Locality revision: "a root directory" not "the root directory"; operator-scoped naming; threshold recommendations split for public vs. private roots; Trust Convention v0.1 references |
+| §7.1 | Locality revision: "a root directory" not "the root directory"; sysop-scoped naming; threshold recommendations split for public vs. private roots; Trust Convention v0.1 references |
 | §13.2 | Added locality blast radius note and Trust Convention reference |
-| §13.3 | Operator-configurable bootstrap: agent resolves operator's directory root, not hardcoded AIETF name; Trust Convention reference |
+| §13.3 | Sysop-configurable bootstrap: agent resolves sysop's directory root, not hardcoded AIETF name; Trust Convention reference |
 | §14 Dependencies | Added Trust Convention v0.1; Added Naming and URI Convention v0.2 |

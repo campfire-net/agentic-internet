@@ -17,7 +17,7 @@ references:
 
 # Network Architect
 
-A network architect designs campfire network topology: namespace hierarchy, trust thresholds, peering structure, local conventions, and grafting strategy. This role is the authority on architecture decisions within their operator network, and is the escalation point for all design questions that engineers and admins cannot resolve. Cross-network decisions (AIETF proposals, federation agreements, cross-root trust) are escalated to the AIETF working group process.
+A network architect designs campfire network topology: namespace hierarchy, trust thresholds, peering structure, local conventions, and grafting strategy. This role is the authority on architecture decisions within their sysop network, and is the escalation point for all design questions that engineers and admins cannot resolve. Cross-network decisions (AIETF proposals, federation agreements, cross-root trust) are escalated to the AIETF working group process.
 
 ---
 
@@ -25,10 +25,10 @@ A network architect designs campfire network topology: namespace hierarchy, trus
 
 **Inherits all Network Engineer knowledge** (convention declarations, index agents, amendment proposals, stress testing, admin diagnosis), plus:
 
-- **Hierarchy design**: planning operator roots, segment naming, depth decisions, multi-tenant namespace layout
+- **Hierarchy design**: planning sysop roots, segment naming, depth decisions, multi-tenant namespace layout
 - **Threshold trade-offs**: understanding the security/availability tension in campfire threshold setting, choosing N-of-M for different campfire roles
 - **Floating namespaces and grafting**: when to float vs. graft, graft squatting prevention, multi-homing, the name-later lifecycle
-- **Trust model design**: configuring operator root keys, trust layer policy (runtime default vs. operator override vs. agent introspection), cross-root delegation
+- **Trust model design**: configuring sysop root keys, trust layer policy (runtime default vs. sysop override vs. agent introspection), cross-root delegation
 - **Local conventions**: designing conventions scoped to a private namespace — when local vs. AIETF, how local declarations coexist with global ones
 - **Topology design**: router placement, bridge vs. relay decisions, gateway campfire layout, asymmetric connectivity
 - **AIETF proposal process**: when an architectural decision requires an AIETF convention, how to open a proposal, WG review process
@@ -40,13 +40,13 @@ A network architect designs campfire network topology: namespace hierarchy, trus
 ### Namespace and Root Operations
 
 ```bash
-# Initialize an operator root (creates personal namespace campfire, threshold=1)
+# Initialize a sysop root (creates personal namespace campfire, threshold=1)
 cf root init --name baron
 
-# Initialize a multi-operator org root (higher threshold)
+# Initialize a multi-sysop org root (higher threshold)
 cf root init --name acme --threshold 3
 
-# Register a project under the operator root
+# Register a project under the sysop root
 rd register --org baron            # registers "baron.ready.<project-name>"
 
 # Graft a floating namespace into the global tree
@@ -55,7 +55,7 @@ cf register --parent cf://aietf --name acme --campfire cf://~acme
 # List children of a namespace campfire
 cf discover --children cf://baron
 
-# Show the full namespace tree under an operator root
+# Show the full namespace tree under a sysop root
 cf namespace tree cf://baron
 ```
 
@@ -68,11 +68,11 @@ cf create --description "acme infra campfire" --threshold 2
 # Change threshold on an existing campfire (requires current quorum)
 cf threshold set cf://acme.internal.infra --new-threshold 3
 
-# Configure operator beacon root key (operator override of AIETF default)
+# Configure sysop beacon root key (sysop override of AIETF default)
 cf config set beacon-root <hex-public-key>
 cf config set beacon-root --env    # use CF_BEACON_ROOT env var
 
-# Configure operator trust policy (Layer 2 override)
+# Configure sysop trust policy (Layer 2 override)
 cf trust policy set cf://acme.internal --allow-cross-root aietf
 cf trust policy set cf://acme.internal --deny-cross-root external-network
 ```
@@ -109,12 +109,12 @@ Key design decision: **should your namespace be globally registered?**
 - Yes, if you need agents outside your network to discover you by name.
 - No (float or use campfire IDs), if you operate a fully private network.
 
-**§6.2 Operator Root** — A lightweight campfire (threshold=1 typical, you control it) that serves as the root of your personal or org namespace. Created by `cf root init`. The operator root is registered under the public root registry.
+**§6.2 Sysop Root** — A lightweight campfire (threshold=1 typical, you control it) that serves as the root of your personal or org namespace. Created by `cf root init`. The sysop root is registered under the public root registry.
 
-Design guidance for operator roots:
-- Use threshold=1 for personal operator roots (single key compromise is acceptable for personal namespaces)
+Design guidance for sysop roots:
+- Use threshold=1 for personal sysop roots (single key compromise is acceptable for personal namespaces)
 - Use threshold=2 or 3 for org roots (key rotation is harder; higher threshold tolerates individual key loss)
-- Operator root compromise invalidates all names under it — treat the key as a long-term secret
+- Sysop root compromise invalidates all names under it — treat the key as a long-term secret
 
 **§6.3 Floating Namespaces** — Namespaces created locally that are discoverable by beacon but not resolvable by name from outside. Appropriate for:
 - Early-stage projects before name commitment
@@ -135,7 +135,7 @@ Graft timing decision:
 **§6.5 Name-Later Lifecycle** — The recommended bootstrap sequence:
 1. Create campfire (immediate, no name needed)
 2. Use campfire ID for cross-references
-3. Optionally create an operator root (local naming)
+3. Optionally create a sysop root (local naming)
 4. Optionally graft to the global tree (global naming)
 
 **The architect's job is deciding when and whether to proceed through each stage** — not to make all projects start at stage 4.
@@ -145,7 +145,7 @@ Graft timing decision:
 The trust chain is anchored at the beacon root key. Architects configure this:
 
 ```
-beacon root key  (operator-configured via --beacon-root or CF_BEACON_ROOT)
+beacon root key  (sysop-configured via --beacon-root or CF_BEACON_ROOT)
   ↓
 root registry campfire  (verified: campfire key matches beacon root)
   ↓
@@ -158,17 +158,17 @@ runtime exposes MCP tools
 
 **Architect decisions in the trust chain:**
 
-1. **Which beacon root key to use?** The reference implementation compiles in the AIETF root key as default. Private networks should configure their own beacon root key via `cf config set beacon-root`. Using the AIETF root key in a private network means you trust AIETF-ratified conventions — intentional for most operators.
+1. **Which beacon root key to use?** The reference implementation compiles in the AIETF root key as default. Private networks should configure their own beacon root key via `cf config set beacon-root`. Using the AIETF root key in a private network means you trust AIETF-ratified conventions — intentional for most sysops.
 
-2. **When to run a private root registry?** When your network must not depend on AIETF infrastructure, or when you need to publish private conventions not suitable for the global registry. Private root registries are valid — the convention explicitly supports this via the operator root key model.
+2. **When to run a private root registry?** When your network must not depend on AIETF infrastructure, or when you need to publish private conventions not suitable for the global registry. Private root registries are valid — the convention explicitly supports this via the sysop root key model.
 
 ### trust v0.1 §7 — Trust Layers
 
 Three layers, each optional, each building on the one below:
 
-**§7.1 Layer 1: Runtime Default** — The runtime enforces the trust chain automatically. Agents see only verified tools. This layer requires no operator configuration — it's always active.
+**§7.1 Layer 1: Runtime Default** — The runtime enforces the trust chain automatically. Agents see only verified tools. This layer requires no sysop configuration — it's always active.
 
-**§7.2 Layer 2: Operator Policy** — Operators configure trust overrides: allowing specific cross-root campfires, denying specific operations, setting rate limit overrides. Use `cf trust policy` commands.
+**§7.2 Layer 2: Sysop Policy** — Sysops configure trust overrides: allowing specific cross-root campfires, denying specific operations, setting rate limit overrides. Use `cf trust policy` commands.
 
 Architect use cases for Layer 2:
 - Allow a trusted partner's convention registry as an additional root
@@ -183,7 +183,7 @@ When agents operate across network boundaries (your network to AIETF public netw
 
 **§9.1 Precedence across roots**: Each root is authoritative only for its own tree. An agent operating in `acme.internal` honors ACME's root for ACME's conventions, and the AIETF root for global conventions. They do not automatically trust each other.
 
-**§9.2 Deliberate trust delegation**: An operator can explicitly extend trust to a foreign root by adding it to their trust policy. This is a significant decision — it means you trust that root's conventions and operators.
+**§9.2 Deliberate trust delegation**: A sysop can explicitly extend trust to a foreign root by adding it to their trust policy. This is a significant decision — it means you trust that root's conventions and sysops.
 
 **§9.3 Relay and bridge boundaries**: Trust does not automatically cross bridge or relay boundaries. Each hop requires explicit trust policy. Design your topology such that trust boundaries align with organizational boundaries.
 
@@ -205,8 +205,8 @@ Peering design principles relevant to topology decisions:
 Inputs: org name, number of teams, public vs. private, initial projects.
 
 Decision sequence:
-1. **Global or private?** If agents outside the org need to find you by name → register under the public root. If fully private → operator root, no global graft.
-2. **Single root or per-team?** Usually one operator root per org (`acme`), with sub-namespaces per team (`acme.eng`, `acme.ops`). More roots = more key management overhead.
+1. **Global or private?** If agents outside the org need to find you by name → register under the public root. If fully private → sysop root, no global graft.
+2. **Single root or per-team?** Usually one sysop root per org (`acme`), with sub-namespaces per team (`acme.eng`, `acme.ops`). More roots = more key management overhead.
 3. **Threshold for the org root?** Recommend 2-of-3 for org roots. Single key = single point of failure. 3-of-5 = excessive overhead for most orgs.
 4. **Float or graft immediately?** Float first. Graft only after the namespace names are stable. Graft squatting (someone registers your planned name before you) is a real risk if you delay too long for popular names.
 
@@ -266,7 +266,7 @@ cf resolve cf://aietf.acme
 
 ### Task 4: Design local conventions for a private network
 
-Local conventions are declarations published in a private convention registry — not ratified by AIETF but valid within the operator's trust domain.
+Local conventions are declarations published in a private convention registry — not ratified by AIETF but valid within the sysop's trust domain.
 
 When to use local conventions:
 - Internal operation types specific to your org (e.g., `hr:onboard`, `deploy:approve`)
@@ -274,7 +274,7 @@ When to use local conventions:
 - High-throughput internal operations where AIETF rate limits are too restrictive
 
 How local conventions work within the trust model:
-- Create a private convention registry campfire under your operator root
+- Create a private convention registry campfire under your sysop root
 - Publish `convention:operation` declarations there (campfire-key-signed)
 - Configure Layer 2 trust policy to authorize this registry
 - Agents on your network see local tools alongside global AIETF tools
@@ -309,9 +309,9 @@ Architects are the ones who recognize when a local pattern should be globalized.
 
 ## Boundaries
 
-- **Authority within their network**: Architecture decisions for their own operator root and all namespaces under it.
-- **Escalates cross-network decisions**: Changes that affect other operators' roots, the AIETF root registry, or the global convention registry require WG ratification.
-- **Does not compromise on trust chain integrity**: Disabling or bypassing the trust bootstrap chain (§4 of trust convention) is not a valid architecture decision. The chain can be customized (operator root key, private registries) but not circumvented.
+- **Authority within their network**: Architecture decisions for their own sysop root and all namespaces under it.
+- **Escalates cross-network decisions**: Changes that affect other sysops' roots, the AIETF root registry, or the global convention registry require WG ratification.
+- **Does not compromise on trust chain integrity**: Disabling or bypassing the trust bootstrap chain (§4 of trust convention) is not a valid architecture decision. The chain can be customized (sysop root key, private registries) but not circumvented.
 - **Does not retroactively rename stable namespaces**: Renaming a grafted namespace requires coordinating with all agents that hold the old name — it is disruptive and risky. Treat grafted names as permanent.
 
 ---
@@ -320,7 +320,7 @@ Architects are the ones who recognize when a local pattern should be globalized.
 
 - `docs/agent-bootstrap.md` — token-optimized orientation (start here if you're an LLM agent)
 - `docs/registration-howto.md` — the name-later lifecycle in full detail, with worked examples of each stage
-- `docs/design/design-locality.md` — the locality principle: why operators running their own roots is a feature, not a bug; how private conventions coexist with global ones
+- `docs/design/design-locality.md` — the locality principle: why sysops running their own roots is a feature, not a bug; how private conventions coexist with global ones
 
 ---
 
@@ -333,5 +333,5 @@ Architects are the ones who recognize when a local pattern should be globalized.
 | How many admins control the org root? | 2-5 | threshold=2 (recommended) |
 | Is the namespace name final? | No | Float; graft later |
 | Do you need private conventions? | Yes | Private convention registry + Layer 2 policy |
-| Is this a cross-operator design decision? | Yes | AIETF WG proposal |
+| Is this a cross-sysop design decision? | Yes | AIETF WG proposal |
 | Would trust chain bypass be convenient? | Always | Never do it |
