@@ -97,6 +97,22 @@ Graft your namespace into the joined network when you're ready:
 cf <root-id> register --name myorg --campfire home
 ```
 
+## Server SDK
+
+`pkg/protocol` provides a `Client` for programmatic campfire access — the same transport abstraction used by the CLI and MCP server. Send messages, read them back, and block on fulfillments, all without transport-specific code in your service:
+
+```go
+client := protocol.New(store, identity)
+
+client.Send(protocol.SendRequest{CampfireID: id, Payload: []byte("hello"), Tags: []string{"status"}})
+result, _ := client.Read(protocol.ReadRequest{CampfireID: id, Tags: []string{"status"}})
+fulfillment, _ := client.Await(protocol.AwaitRequest{CampfireID: id, TargetMsgID: future.ID, Timeout: 30 * time.Second})
+```
+
+`pkg/convention` wraps `Client` with convention dispatch: arg validation, tag composition, rate limiting, and provenance gating. Transport is selected automatically from the campfire's membership record — filesystem, GitHub Issues, or P2P HTTP — with no client configuration needed.
+
+Full reference: [Server SDK](../campfire/docs/convention-sdk.md)
+
 ## Override the Seed
 
 Sysops can replace the default seed with their own convention set:
