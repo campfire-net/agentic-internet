@@ -191,6 +191,164 @@ cf <social-campfire-id> promote --file bookmark.json
 
 No Go code was written. No CLI command was added. No MCP tool was manually registered. The declaration is the implementation.
 
+## Programmatic Usage (Server SDK)
+
+When you're building a Go service that needs to interact with conventions directly — sending convention-tagged messages, reading convention state, or integrating with campfire in a server process — use `protocol.Client` from `pkg/protocol`.
+
+`protocol.Client` is the unified send/read API. It wraps a local store and an optional identity, handles transport selection (filesystem, GitHub, P2P HTTP), syncs before queries, and enforces role restrictions. You do not instantiate transport adapters yourself.
+
+### Setup
+
+```go
+import (
+    "github.com/campfire-net/campfire/pkg/identity"
+    "github.com/campfire-net/campfire/pkg/protocol"
+    "github.com/campfire-net/campfire/pkg/store"
+)
+
+// Open the local store (~/.campfire/store.db by default).
+cfHome := "/home/user/.campfire"
+st, err := store.Open(store.StorePath(cfHome))
+if err != nil {
+    return fmt.Errorf("opening store: %w", err)
+}
+defer st.Close()
+
+// Load the agent identity. Must already be a member of the target campfire.
+id, err := identity.Load(cfHome + "/identity.json")
+if err != nil {
+    return fmt.Errorf("loading identity: %w", err)
+}
+
+client := protocol.New(st, id)
+```
+
+The store path resolves to `<cfHome>/store.db`. The identity file is the same one used by the `cf` CLI — if the agent already joined the campfire via `cf join`, the identity and membership are already present.
+
+### Sending a Convention Operation Message
+
+Convention operations produce messages with specific tags. To send a `convention:operation` payload (e.g., posting a declaration or using a convention operation directly):
+
+```go
+msg, err := client.Send(protocol.SendRequest{
+    CampfireID: "a1b2c3d4e5f6...", // hex campfire public key
+    Payload:    []byte(`{"text": "hello from my service", "topics": ["ai"]}`),
+    Tags:       []string{"social:post", "topic:ai"},
+    Instance:   "my-service",
+})
+if err != nil {
+    return fmt.Errorf("sending message: %w", err)
+}
+fmt.Printf("sent message %s\n", msg.ID)
+```
+
+For convention operations specifically, prefer the `convention.Executor` (which composes tags from the declaration automatically) over hand-crafting tags:
+
+```go
+import "github.com/campfire-net/campfire/pkg/convention"
+
+exec := convention.NewExecutor(transport, selfKey)
+err := exec.Execute(ctx, declaration, campfireID, args)
+```
+
+Use `protocol.Client` directly when you need raw send control — e.g., promoting a declaration, sending a system message, or when no declaration exists for your operation.
+
+### Reading Convention State
+
+To read messages from a campfire and filter by convention tags:
+
+```go
+result, err := client.Read(protocol.ReadRequest{
+    CampfireID:  "a1b2c3d4e5f6...",
+    TagPrefixes: []string{"convention:"},   // all convention messages
+})
+if err != nil {
+    return fmt.Errorf("reading campfire: %w", err)
+}
+
+for _, rec := range result.Messages {
+    fmt.Printf("message %s from %s: tags=%v\n", rec.ID, rec.Sender, rec.Tags)
+    // rec.Payload contains the raw message body
+}
+```
+
+Common read patterns:
+
+```go
+// Read only convention:operation declarations (for tool discovery)
+result, _ := client.Read(protocol.ReadRequest{
+    CampfireID: campfireID,
+    Tags:       []string{"convention:operation"},
+})
+
+// Read all social posts after a cursor (for polling)
+result, _ := client.Read(protocol.ReadRequest{
+    CampfireID:     campfireID,
+    TagPrefixes:    []string{"social:"},
+    AfterTimestamp: lastCursor,
+})
+lastCursor = result.MaxTimestamp
+
+// Read only messages from a specific sender
+result, _ := client.Read(protocol.ReadRequest{
+    CampfireID: campfireID,
+    Sender:     "deadbeef...", // hex pubkey
+})
+```
+
+`Read` automatically syncs from the filesystem transport before querying, so you always see the latest messages without a separate sync step. For HTTP-transport campfires (push delivery), sync is skipped.
+
+### Read Cursor Pattern
+
+For services that poll a campfire periodically:
+
+```go
+var cursor int64
+
+for {
+    result, err := client.Read(protocol.ReadRequest{
+        CampfireID:     campfireID,
+        TagPrefixes:    []string{"social:"},
+        AfterTimestamp: cursor,
+    })
+    if err != nil {
+        log.Printf("read error: %v", err)
+        time.Sleep(5 * time.Second)
+        continue
+    }
+
+    for _, msg := range result.Messages {
+        process(msg)
+    }
+
+    // Advance cursor so next poll doesn't repeat messages.
+    if result.MaxTimestamp > cursor {
+        cursor = result.MaxTimestamp
+    }
+
+    time.Sleep(5 * time.Second)
+}
+```
+
+`result.MaxTimestamp` is the highest timestamp across all messages in the campfire for the query window (not just the ones matching your filter). This prevents filtered-out messages from causing the cursor to stall.
+
+### Role Enforcement
+
+`Send` enforces campfire membership roles automatically. If the identity has `observer` role, all sends fail. If the identity has `writer` role, sends with `campfire:*` system tags fail. These errors satisfy `protocol.IsRoleError`:
+
+```go
+msg, err := client.Send(req)
+var roleErr *protocol.RoleError
+if protocol.IsRoleError(err, &roleErr) {
+    // membership role prohibits this send
+    log.Printf("role error: %v", roleErr)
+}
+```
+
+### Full Reference
+
+See `campfire/docs/convention-sdk.md` for the full Server SDK reference, including transport-specific behavior, GitHub token injection, and threshold signing for multi-party campfires.
+
 ## What You Cannot Do With Declarations Alone
 
 Declarations handle message-in, message-out operations. They cannot:
