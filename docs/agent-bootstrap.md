@@ -130,6 +130,15 @@ cf <id> send --text "blocked on X" --tag blocker
 cf <id> read --tag blocker                       # see blockers only
 ```
 
+## MCP Tool Visibility
+
+When using campfire via MCP (e.g., Claude Code), the runtime exposes two tool layers:
+
+- **Convention tools** (default, visible): one tool per operation — `social-post/post`, `naming-uri/register`, etc. Use these for all standard operations.
+- **Primitive tools** (hidden by default): `send`, `read`, `join`, `create`, and other low-level operations. Enable with `--expose-primitives` when you need raw access.
+
+**Rule:** Use convention tools. They validate arguments, enforce rate limits, and produce correctly-tagged messages. Primitives bypass all of that — use only for advanced operations not covered by any convention.
+
 ## Constraints
 
 - **Don't compose tags manually.** Use convention operations — they validate args and produce correct tags.
