@@ -1,9 +1,12 @@
 # Sysop Delegation Convention
 
-**Version:** Draft v0.1
+**Version:** Draft v0.1 → cf-delegation 1.0 (OPEN-012 amendment)
 **Working Group:** WG-1 (Discovery)
 **Date:** 2026-03-28
-**Status:** Draft
+**Amended:** 2026-04-28 (cf-delegation 1.0 — campfireagent-0b3)
+**Status:** Draft (amended)
+
+> **cf-delegation 1.0 amendment (OPEN-012):** The `sysop_override: true` field defined in §5.2 of the original v0.1 draft is removed. Pass 1 of the 0.30 design review flagged it as P3-leaking: any claimed Level 2+ sysop could assert global override revocation authority across all campfires, regardless of campfire membership. cf-delegation 1.0 replaces it with a campfire-scoped "owner-of-record override" (§8.4): only the campfire's owner-of-record may issue override revocations, and only within that campfire. This is a narrowing, not a removal of the emergency break capability. Implementations targeting cf-delegation 1.0 MUST reject `sysop_override: true` as a revocation authority.
 
 ---
 
@@ -177,7 +180,9 @@ Issued by a delegator to revoke a prior delegation. Revocation is immediate upon
 
 **Signing:** MUST be signed by the `delegator_key`. The runtime MUST verify that `delegator_key` matches the `delegator_key` field in the original `delegation-grant` message. A key cannot revoke delegations it did not issue.
 
-**Exception — sysop override:** A root sysop (Level 2+) MAY revoke any delegation in a chain beneath them, even delegations they did not directly issue, by including `sysop_override: true` and signing with a key that has a direct Level 2+ attestation. This handles emergency revocation when an intermediate delegator has been compromised.
+**Exception — campfire owner override (cf-delegation 1.0):** The campfire's owner-of-record MAY revoke any delegation in a chain within that campfire, even delegations the owner did not directly issue, by omitting `delegator_key` and signing with the campfire's owner key. This is the emergency break for compromised interior nodes. The override is scoped strictly to the campfire where the owner holds owner-of-record status — an owner of campfire A cannot override-revoke in campfire B.
+
+**Deprecation note:** The `sysop_override: true` field present in sysop-delegation v0.1 §5.2 is removed in cf-delegation 1.0. It is not a valid field. Any message presenting `sysop_override: true` as a revocation authority MUST be rejected. The former behavior (any Level 2+ sysop claiming override authority over any chain) was P3-leaking: it allowed global revocation through claimed root authority, bypassing campfire-scoped ownership. The owner-of-record constraint narrows this to within-campfire authority only.
 
 **Tags:** `delegation:revoke`
 
@@ -388,11 +393,15 @@ Runtimes SHOULD:
 
 For high-stakes campfires, sysops MAY configure `revocation_check_required: true`, which requires the runtime to confirm revocation state is fresh before accepting a delegated key.
 
-### 8.4 Sysop Override Revocation
+### 8.4 Campfire Owner Override Revocation (cf-delegation 1.0)
 
-A Level 2+ sysop MAY issue an override revocation (§5.2 `sysop_override: true`) for any delegation in a chain beneath them. This is the emergency break: if an intermediate agent key is compromised and that key refuses to issue its own revocation, the sysop can bypass it.
+The campfire's owner-of-record MAY issue an override revocation for any delegation within that campfire. This is the emergency break: if an intermediate agent key is compromised and that key refuses to issue its own revocation, the campfire owner can bypass it.
 
-Override revocation MUST be signed by a key with a current Level 2+ provenance attestation. The runtime validates the attestation freshness (Level 3 SHOULD be required for override revocations in high-stakes campfires) before applying the revocation.
+**Scope constraint:** Override revocation is scoped to the campfire where the revoker holds owner-of-record status. A key that is the owner-of-record for campfire A CANNOT override-revoke delegations in campfire B. This is the critical narrowing from the v0.1 draft: the old `sysop_override: true` mechanism allowed any Level 2+ sysop to claim global override authority — a P3-leaking property. The cf-delegation 1.0 constraint ensures override authority is campfire-local.
+
+Override revocation MUST be signed by the campfire's owner key. The runtime MUST verify the revoking key matches the campfire's owner-of-record before applying the override. A Level 2+ key that is NOT the campfire's owner cannot issue override revocations, regardless of its provenance level.
+
+**Removed: `sysop_override: true`.** The `sysop_override: true` field from sysop-delegation v0.1 §5.2 is not recognized in cf-delegation 1.0. Runtime implementations MUST NOT accept messages with `sysop_override: true` as an override-revoke authority. See §5.2 deprecation note.
 
 ---
 
@@ -610,7 +619,7 @@ See §5.2. Revokes a delegation and optionally cascades.
 
 **Tags:** `delegation:revoke`
 **Antecedent:** `exactly_one(delegation-grant)`
-**Signing:** MUST be signed by the key matching the delegation's `delegator_key` field, OR by a Level 2+ sysop key with `sysop_override: true`.
+**Signing:** MUST be signed by the key matching the delegation's `delegator_key` field, OR by the campfire's owner-of-record key (owner override, §8.4). `sysop_override: true` is NOT a valid signing authority in cf-delegation 1.0 — messages presenting it MUST be rejected.
 **Rate limit:** Unlimited. Emergency revocation must not be throttled.
 
 ### 13.4 delegation-query
@@ -755,7 +764,7 @@ A delegator grants scope `conventions: ["A"]`. The delegate issues a re-delegati
 An agent key at depth 2 is compromised. The attacker uses it to issue delegations to their own keys, extending the tree with malicious sub-agents, all with valid chains to the sysop root.
 
 **Mitigations:**
-- The sysop override revocation mechanism (§8.4) allows the root sysop to revoke any delegation in the tree, bypassing the compromised node.
+- The campfire owner override revocation mechanism (§8.4) allows the campfire's owner-of-record to revoke any delegation in the tree within that campfire, bypassing the compromised node. This authority is scoped to the campfire — the owner cannot override-revoke in other campfires.
 - `allow_redelegation: false` (the default) prevents the compromised key from extending the chain further.
 - Auditing via `cf delegate tree` makes the unexpected sub-delegations visible to the sysop.
 
